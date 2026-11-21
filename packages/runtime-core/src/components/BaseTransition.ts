@@ -10,17 +10,20 @@ import {
   type VNode,
   type VNodeArrayChildren,
   cloneVNode,
+  createCommentVNode,
   isSameVNodeType,
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
-import { toRaw } from '@vue/reactivity'
+import { EffectFlags, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
-import { SchedulerJobFlags } from '../scheduler'
+import { type SchedulerJob, SchedulerJobFlags, queueJob } from '../scheduler'
+import { isHmrUpdating } from '../hmr'
+import { filterSingleRoot } from '../componentRenderUtils'
 
 type Hook<T = () => void> = T | T[]
 
@@ -137,11 +140,6 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   onAppearCancelled: TransitionHookValidator,
 }
 
-const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = instance.subTree
-  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
-}
-
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
@@ -154,11 +152,18 @@ const BaseTransitionImpl: ComponentOptions = {
     return () => {
       const children =
         slots.default && getTransitionRawChildren(slots.default(), true)
-      if (!children || !children.length) {
+      const child =
+        children && children.length
+          ? findNonCommentChild(children)
+          : // Keep explicit default-slot conditionals on the same transition path
+            // as regular v-if branches, which render a comment placeholder.
+            instance.subTree
+            ? createCommentVNode()
+            : undefined
+      if (!child) {
         return
       }
 
-      const child: VNode = findNonCommentChild(children)
       // there's no need to track reactivity for these props so use the raw
       // props for a bit better perf
       const rawProps = toRaw(props)
@@ -185,13 +190,11 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      let enterHooks = resolveTransitionHooks(
+      const enterHooks = resolveTransitionHooks(
         innerChild,
         rawProps,
         state,
         instance,
-        // #11061, ensure enterHooks is fresh after clone
-        hooks => (enterHooks = hooks),
       )
 
       if (innerChild.type !== Comment) {
@@ -204,8 +207,8 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild) &&
-        recursiveGetSubtree(instance).type !== Comment
+        !isSameVNodeType(oldInnerChild, innerChild) &&
+        getTransitionRoot(instance.subTree)
       ) {
         let leavingHooks = resolveTransitionHooks(
           oldInnerChild,
@@ -224,7 +227,20 @@ const BaseTransitionImpl: ComponentOptions = {
             // #6835
             // it also needs to be updated when active is undefined
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-              instance.update()
+              // #15727 a leave done synchronously lands here inside the
+              // patch that starts it, before the placeholder is mounted:
+              // update once that patch is done
+              if (instance.effect.flags & EffectFlags.RUNNING) {
+                const job: SchedulerJob = () => {
+                  if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+                    instance.update()
+                  }
+                }
+                job.i = instance
+                queueJob(job)
+              } else {
+                instance.update()
+              }
             }
             delete leavingHooks.afterLeave
             oldInnerChild = undefined
@@ -325,7 +341,6 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance,
-  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {
     appear,
@@ -388,18 +403,29 @@ export function resolveTransitionHooks(
       }
       // for toggled element with same key (v-if)
       const leavingVNode = leavingVNodesCache[key]
-      if (
-        leavingVNode &&
-        isSameVNodeType(vnode, leavingVNode) &&
-        (leavingVNode.el as TransitionElement)[leaveCbKey]
-      ) {
-        // force early removal (not cancelled)
-        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
+      if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
+        // A component's el still points to its leaving root during patch.
+        let leavingCb = (leavingVNode.el as TransitionElement)[leaveCbKey]
+        if (!leavingCb) {
+          const leavingRoot = getTransitionRoot(leavingVNode)
+          leavingCb =
+            leavingRoot && (leavingRoot.el as TransitionElement)[leaveCbKey]
+        }
+        if (leavingCb) {
+          // force early removal (not cancelled)
+          leavingCb()
+        }
       }
       callHook(hook, [el])
     },
 
     enter(el) {
+      // an element that is leaving does not enter. In in-out mode, the
+      // element that waits for this enter leaves now.
+      if (!isHmrUpdating && el[leaveCbKey]) {
+        if (hooks.delayedLeave) hooks.delayedLeave()
+        return
+      }
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
@@ -413,7 +439,7 @@ export function resolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el[enterCbKey] = (cancelled?) => {
+      el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -425,7 +451,8 @@ export function resolveTransitionHooks(
           hooks.delayedLeave()
         }
         el[enterCbKey] = undefined
-      })
+      }
+      const done = el[enterCbKey]!.bind(null, false)
       if (hook) {
         callAsyncHook(hook, [el, done])
       } else {
@@ -443,7 +470,7 @@ export function resolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el[leaveCbKey] = (cancelled?) => {
+      el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -456,7 +483,8 @@ export function resolveTransitionHooks(
         if (leavingVNodesCache[key] === vnode) {
           delete leavingVNodesCache[key]
         }
-      })
+      }
+      const done = el[leaveCbKey]!.bind(null, false)
       leavingVNodesCache[key] = vnode
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
@@ -466,15 +494,24 @@ export function resolveTransitionHooks(
     },
 
     clone(vnode) {
-      const hooks = resolveTransitionHooks(
-        vnode,
-        props,
-        state,
-        instance,
-        postClone,
-      )
-      if (postClone) postClone(hooks)
-      return hooks
+      const cloned = resolveTransitionHooks(vnode, props, state, instance)
+      // a clone runs the hooks for a vnode standing in for the one the owning
+      // <BaseTransition> switches (a Suspense branch, a cloned root): the mode
+      // callbacks it sets live on these hooks, the clone defers to them
+      cloned.afterLeave = () => {
+        if (hooks.afterLeave) hooks.afterLeave()
+      }
+      cloned.delayLeave = (el, earlyRemove, delayedLeave) => {
+        if (hooks.delayLeave) {
+          hooks.delayLeave(el, earlyRemove, delayedLeave)
+        } else {
+          delayedLeave()
+        }
+      }
+      cloned.delayedLeave = () => {
+        if (hooks.delayedLeave) hooks.delayedLeave()
+      }
+      return cloned
     },
   }
 
@@ -493,7 +530,7 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function getInnerChild(vnode: VNode): VNode | undefined {
+export function getInnerChild(vnode: VNode): VNode | undefined {
   if (!isKeepAlive(vnode)) {
     if (isTeleport(vnode.type) && vnode.children) {
       return findNonCommentChild(vnode.children as VNode[])
@@ -525,12 +562,35 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     vnode.transition = hooks
-    setTransitionHooks(vnode.component.subTree, hooks)
+    const subTree = vnode.component.subTree
+    setTransitionHooks(
+      isTeleport(subTree.type) ? getInnerChild(subTree) || subTree : subTree,
+      hooks,
+    )
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-    vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
-    vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
+    const suspense = vnode.suspense
+    if (suspense) {
+      // mounted: the branch on screen carries the switch, as a component's
+      // subTree does. a pending branch off screen keeps its hooks: it leaves
+      // out of sight on its own and must not drive the mode
+      const branch = suspense.isHydrating
+        ? suspense.pendingBranch
+        : suspense.activeBranch
+      if (branch) {
+        setTransitionHooks(branch, hooks.clone(branch))
+      }
+    } else {
+      vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
+      vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
+    }
   } else {
     vnode.transition = hooks
+    if (vnode.type === Fragment && isArray(vnode.children)) {
+      const child = filterSingleRoot(vnode.children, false)
+      if (child) {
+        setTransitionHooks(child, hooks)
+      }
+    }
   }
 }
 
@@ -570,4 +630,18 @@ export function getTransitionRawChildren(
     }
   }
   return ret
+}
+
+export function getTransitionRoot(vnode: VNode): VNode | undefined {
+  if (vnode.component) {
+    return getTransitionRoot(vnode.component.subTree)
+  }
+  if (vnode.type === Fragment) {
+    const child =
+      isArray(vnode.children) && filterSingleRoot(vnode.children, false)
+    return child ? getTransitionRoot(child) : undefined
+  }
+  if (vnode.type !== Comment) {
+    return vnode
+  }
 }

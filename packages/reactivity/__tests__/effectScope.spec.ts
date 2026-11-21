@@ -202,6 +202,20 @@ describe('reactivity/effect/scope', () => {
     expect(dummy).toBe(7)
   })
 
+  it('should run onScopeDispose callback immediately when scope is stopped', () => {
+    const before = vi.fn()
+    const after = vi.fn()
+    const scope = effectScope()
+    scope.run(() => {
+      onScopeDispose(before)
+      scope.stop()
+      onScopeDispose(after)
+    })
+
+    expect(before).toHaveBeenCalledTimes(1)
+    expect(after).toHaveBeenCalledTimes(1)
+  })
+
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
     const spy = vi.fn()
     const scope = effectScope()
@@ -296,6 +310,25 @@ describe('reactivity/effect/scope', () => {
     })
   })
 
+  it('calling .off() out of order should unlink the scope from the active chain', () => {
+    const parentScope = effectScope(true)
+    const firstScope = effectScope(true)
+    const secondScope = effectScope(true)
+
+    parentScope.on()
+    firstScope.on()
+    secondScope.on()
+
+    firstScope.off()
+    expect(getCurrentScope()).toBe(secondScope)
+
+    secondScope.off()
+    expect(getCurrentScope()).toBe(parentScope)
+
+    parentScope.off()
+    expect(getCurrentScope()).toBeUndefined()
+  })
+
   it('should pause/resume EffectScope', async () => {
     const counter = reactive({ num: 0 })
     const fnSpy = vi.fn(() => counter.num)
@@ -361,5 +394,95 @@ describe('reactivity/effect/scope', () => {
 
     expect(scope.effects.length).toBe(0)
     expect(scope.cleanups.length).toBe(0)
+  })
+
+  it('should still trigger updates after stopping scope stored in reactive object', () => {
+    const rs = ref({
+      stage: 0,
+      scope: null as any,
+    })
+
+    let renderCount = 0
+    effect(() => {
+      renderCount++
+      return rs.value.stage
+    })
+
+    const handleBegin = () => {
+      const status = rs.value
+      status.stage = 1
+      status.scope = effectScope()
+      status.scope.run(() => {
+        watch([() => status.stage], () => {})
+      })
+    }
+
+    const handleExit = () => {
+      const status = rs.value
+      status.stage = 0
+      const watchScope = status.scope
+      status.scope = null
+      if (watchScope) {
+        watchScope.stop()
+      }
+    }
+
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(1)
+
+    // 1. Click begin
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(2)
+
+    // 2. Click add
+    rs.value.stage++
+    expect(rs.value.stage).toBe(2)
+    expect(renderCount).toBe(3)
+
+    // 3. Click end
+    handleExit()
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(4)
+
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(5)
+  })
+
+  it('should stop child scopes when cleanup stops a sibling scope', () => {
+    const parent = effectScope()
+    let sibling!: EffectScope
+
+    parent.run(() => {
+      effectScope().run(() => {
+        onScopeDispose(() => sibling.stop())
+      })
+      sibling = effectScope()
+    })
+
+    expect(() => parent.stop()).not.toThrow()
+    expect(sibling.active).toBe(false)
+  })
+
+  it('should resume effects when a watcher stops a sibling watcher', () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let stopSecond = () => {}
+    const firstSpy = vi.fn(() => stopSecond())
+    const secondSpy = vi.fn()
+
+    scope.run(() => {
+      watch(count, firstSpy, { flush: 'sync' })
+      stopSecond = watch(count, secondSpy, { flush: 'sync' })
+    })
+
+    scope.pause()
+    count.value++
+
+    expect(() => scope.resume()).not.toThrow()
+    expect(firstSpy).toHaveBeenCalledTimes(1)
+    expect(secondSpy).not.toHaveBeenCalled()
+    expect(scope.effects).toHaveLength(1)
   })
 })

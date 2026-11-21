@@ -1,5 +1,6 @@
 import {
   CREATE_STATIC,
+  type CompilerOptions,
   ConstantTypes,
   NodeTypes,
   compile,
@@ -11,11 +12,15 @@ import {
 } from '../../src/transforms/stringifyStatic'
 
 describe('stringify static html', () => {
-  function compileWithStringify(template: string) {
+  function compileWithStringify(
+    template: string,
+    options: CompilerOptions = {},
+  ) {
     return compile(template, {
       hoistStatic: true,
       prefixIdentifiers: true,
       transformHoist: stringifyStatic,
+      ...options,
     })
   }
 
@@ -389,6 +394,23 @@ describe('stringify static html', () => {
     ])
   })
 
+  test.each(['false', '0'])('should remove `hidden` with value `%s`', value => {
+    const { ast } = compileWithStringify(
+      `<div>
+      ${repeat(
+        `<span :hidden="${value}"></span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}
+    </div>`,
+    )
+    expect(ast.cached).toMatchObject([
+      cachedArrayStaticNodeMatcher(
+        repeat(`<span></span>`, StringifyThresholds.ELEMENT_WITH_BINDING_COUNT),
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      ),
+    ])
+  })
+
   test('should stringify svg', () => {
     const svg = `<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">`
     const repeated = `<rect width="50" height="50" fill="#C4C4C4"></rect>`
@@ -524,5 +546,121 @@ describe('stringify static html', () => {
     )
 
     expect(code).toMatchSnapshot()
+  })
+
+  test('eligible content + v-once node', () => {
+    const { code } = compileWithStringify(
+      `<div>
+        <div v-once>{{ msg }}</div>
+        ${repeat(`<span class="foo">foo</span>`, StringifyThresholds.ELEMENT_WITH_BINDING_COUNT)}
+      </div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test.each(['0', 'false'])('stringify v-html with `%s`', value => {
+    const { code } = compileWithStringify(
+      `${repeat(
+        `<div v-html="${value}"></div>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}`,
+    )
+    expect(code).toMatch(
+      `<div>${value}</div><div>${value}</div><div>${value}</div><div>${value}</div><div>${value}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  // #16051
+  test.each(['0', '-0', '!1', '1 > 2', '0 / 0', 'null', 'void 0'])(
+    'should omit boolean attributes with falsy constant `%s`',
+    value => {
+      const { ast } = compileWithStringify(
+        `<div>${repeat(
+          `<input :disabled="${value}" :checked="${value}" :readonly="${value}" :hidden="${value}">`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        )}</div>`,
+      )
+      expect(ast.cached).toMatchObject([
+        cachedArrayStaticNodeMatcher(
+          repeat('<input>', StringifyThresholds.ELEMENT_WITH_BINDING_COUNT),
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
+      ])
+    },
+  )
+
+  test.each([
+    ['true', 'true'],
+    ['1', '1'],
+    ["''", ''],
+    ["'false'", 'false'],
+  ])(
+    'should retain boolean attributes with constant `%s`',
+    (value, expected) => {
+      const { ast } = compileWithStringify(
+        `<div>${repeat(
+          `<input :disabled="${value}" :checked="${value}" :readonly="${value}" :hidden="${value}">`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        )}</div>`,
+      )
+      expect(ast.cached).toMatchObject([
+        cachedArrayStaticNodeMatcher(
+          repeat(
+            `<input disabled="${expected}" checked="${expected}" readonly="${expected}" hidden="${expected}">`,
+            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+          ),
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
+      ])
+    },
+  )
+
+  test.each(['disabled', 'default', 'readonly', 'hidden'])(
+    'should retain cached VNodes for custom elements with bound `%s`',
+    attr => {
+      const { ast } = compileWithStringify(
+        `<div>${repeat(
+          `<my-element :${attr}="false" />`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        )}</div>`,
+        { isCustomElement: tag => tag === 'my-element' },
+      )
+      expect(ast.cached).toMatchObject([
+        cachedArrayBailedMatcher(
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
+      ])
+    },
+  )
+
+  test('should retain the cached subtree around a custom element boolean binding', () => {
+    const { ast } = compileWithStringify(
+      `<div><section>${repeat(
+        '<span class="foo" />',
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}<my-element :disabled="0" /></section></div>`,
+      { isCustomElement: tag => tag === 'my-element' },
+    )
+    expect(ast.cached).toMatchObject([cachedArrayBailedMatcher()])
+  })
+
+  test('should still stringify custom elements with static attributes and other bindings', () => {
+    const { ast } = compileWithStringify(
+      `<div>${repeat(
+        `<my-element disabled :title="'hello'" />`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div>`,
+      { isCustomElement: tag => tag === 'my-element' },
+    )
+    expect(ast.cached).toMatchObject([
+      cachedArrayStaticNodeMatcher(
+        repeat(
+          '<my-element disabled title="hello"></my-element>',
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      ),
+    ])
   })
 })

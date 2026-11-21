@@ -1,3 +1,477 @@
+## [3.5.46](https://github.com/vuejs/core/compare/v3.5.45...v3.5.46) (2026-11-20)
+
+### Bug Fixes
+
+* **compiler-sfc:** honour user `onWarn` + surface inline template tips ([#16152](https://github.com/vuejs/core/issues/16152)) ([21738b5](https://github.com/vuejs/core/commit/21738b527bac4a91eef9cbdfc2cc5ac1f3dbdec9))
+* **compiler-sfc:** match tsconfig include/exclude relative to the config file ([f897fa3](https://github.com/vuejs/core/commit/f897fa3478ad3e1ba2060933d09af2ba854faebb))
+* **compiler-sfc:** preserve generic type argument scopes ([#16253](https://github.com/vuejs/core/issues/16253)) ([cbd9595](https://github.com/vuejs/core/commit/cbd95955a5362b44060908f6e28ad447c3031b8a)), closes [#16248](https://github.com/vuejs/core/issues/16248)
+* **compiler-sfc:** resolve configDir relative to referenced configs ([2e2f7c6](https://github.com/vuejs/core/commit/2e2f7c6bef54a85a3ce8db768b11c5562385b65d))
+* **compiler-ssr:** inject css vars into the content of keep-alive and teleport ([#16245](https://github.com/vuejs/core/issues/16245)) ([aec1e05](https://github.com/vuejs/core/commit/aec1e052e65b36abea659d553042511917dde211))
+* **compiler-ssr:** map static DOM prop aliases to HTML attribute names ([#16334](https://github.com/vuejs/core/issues/16334)) ([0f4002c](https://github.com/vuejs/core/commit/0f4002c6882ccfb1b2621b6acf266bd7ff84fb96))
+* **hydration:** claim disabled teleport target anchors before nested teleports ([#16333](https://github.com/vuejs/core/issues/16333)) ([148fdac](https://github.com/vuejs/core/commit/148fdacdc3a67aaa2b8d1b615da227c3fcc2df53)), closes [#16332](https://github.com/vuejs/core/issues/16332)
+* **runtime-dom:** apply css vars to teleported content replaced without patching the teleport ([#16239](https://github.com/vuejs/core/issues/16239)) ([b5b2310](https://github.com/vuejs/core/commit/b5b2310d88002424af5f404e75e0ca8fc59047bc)), closes [#7312](https://github.com/vuejs/core/issues/7312) [#7344](https://github.com/vuejs/core/issues/7344) [#16237](https://github.com/vuejs/core/issues/16237) [#16238](https://github.com/vuejs/core/issues/16238)
+* **shared:** handle objects without a prototype in looseEqual (fix [#16250](https://github.com/vuejs/core/issues/16250)) ([#16251](https://github.com/vuejs/core/issues/16251)) ([6782586](https://github.com/vuejs/core/commit/6782586546cfe580ef7b5c18d692199d52f13e77))
+* **ssr:** avoid inherited property-to-attribute mappings ([#16225](https://github.com/vuejs/core/issues/16225)) ([7ef6817](https://github.com/vuejs/core/commit/7ef6817112bb420ef47a7252821b37caae016ac9))
+* **ssr:** inject css vars through root loops and fragments ([#16244](https://github.com/vuejs/core/issues/16244)) ([7c8a0f7](https://github.com/vuejs/core/commit/7c8a0f704f6eb762e86bbbcc4af5548e6c7532d2)), closes [#16242](https://github.com/vuejs/core/issues/16242) [#16243](https://github.com/vuejs/core/issues/16243)
+* **suspense:** drop async setup errors from unmounted components ([#16350](https://github.com/vuejs/core/issues/16350)) ([da101a4](https://github.com/vuejs/core/commit/da101a4caf8476a1c863d2471079dc03023d4684)), closes [#16349](https://github.com/vuejs/core/issues/16349)
+* **suspense:** run mounted hooks once when an out-in boundary resolves inside a pending ancestor ([#16345](https://github.com/vuejs/core/issues/16345)) ([096dc12](https://github.com/vuejs/core/commit/096dc120aeccc4fed4056b32413c1868c7f70857)), closes [#16344](https://github.com/vuejs/core/issues/16344)
+* **transition:** ignore stale enter callbacks on a reused element ([09a73ad](https://github.com/vuejs/core/commit/09a73ad997d7ef8beb87ab5884265e0c599b2bef)), closes [#16355](https://github.com/vuejs/core/issues/16355)
+* **transition:** ignore stale leave callbacks on a reused element ([#16358](https://github.com/vuejs/core/issues/16358)) ([942d307](https://github.com/vuejs/core/commit/942d307f64660bc3438dfede3c17ae0fb31c3655))
+* **transition:** only skip enter for the element that is leaving (fix [#16359](https://github.com/vuejs/core/issues/16359)) ([#16362](https://github.com/vuejs/core/issues/16362)) ([6e0078a](https://github.com/vuejs/core/commit/6e0078a6d5880c27bd239a7c1d4c559388c4c48b))
+
+## [3.5.45](https://github.com/vuejs/core/compare/v3.5.44...v3.5.45) (2026-11-05)
+
+### Bug Fixes
+
+* **compiler-core:** copy loc in cloneLoc instead of recomputing it ([#16092](https://github.com/vuejs/core/issues/16092)) ([3cee79a](https://github.com/vuejs/core/commit/3cee79ad4c2a590a47294ba100bef94a633cb8b1)), closes [#16091](https://github.com/vuejs/core/issues/16091)
+* **compiler-dom:** preserve static boolean binding semantics ([#16055](https://github.com/vuejs/core/issues/16055)) ([05db7e8](https://github.com/vuejs/core/commit/05db7e807be841e6f343d0237669669b18c89d4d)), closes [#16051](https://github.com/vuejs/core/issues/16051)
+* **compiler-sfc:** respect catch and switch lexical scopes (fix [#16098](https://github.com/vuejs/core/issues/16098)) ([#16101](https://github.com/vuejs/core/issues/16101)) ([0f20152](https://github.com/vuejs/core/commit/0f20152855296b7e588cc92c8f078ad35a3b536e))
+* **hmr:** retry reloads after pending async roots resolve ([#16060](https://github.com/vuejs/core/issues/16060)) ([fbaa794](https://github.com/vuejs/core/commit/fbaa794113a9994041efbf32df0ebb2c3e15ccbe))
+* **hydration:** only update component el when replacing its host node ([#16001](https://github.com/vuejs/core/issues/16001)) ([51fd0cb](https://github.com/vuejs/core/commit/51fd0cbca63c67c5c4454bfdecce7220a33c4073))
+* **KeepAlive:** cache a resolved Suspense child right away ([#16119](https://github.com/vuejs/core/issues/16119)) ([716a29e](https://github.com/vuejs/core/commit/716a29eca2e53a51bd2437cfae055c83157d4ca2))
+* **KeepAlive:** unmount a child deactivated before it was cached ([#15981](https://github.com/vuejs/core/issues/15981)) ([02d2c2b](https://github.com/vuejs/core/commit/02d2c2b71980c422d5561f7175903c36b16ca521))
+* **reactivity:** run onScopeDispose in a stopped scope ([#16108](https://github.com/vuejs/core/issues/16108)) ([21dd33c](https://github.com/vuejs/core/commit/21dd33c61c6e26d15c1893dad899f1187a77dc03))
+* **runtime-core:** anchor on the async placeholder when a component root has no el ([#16122](https://github.com/vuejs/core/issues/16122)) ([b5abf8c](https://github.com/vuejs/core/commit/b5abf8c23b48fd276a8611120c12d0676e795762))
+* **runtime-core:** call directive mounted hooks with the latest binding ([#16120](https://github.com/vuejs/core/issues/16120)) ([6416207](https://github.com/vuejs/core/commit/64162077e12dc544608c80c1f7810c3c89b84be5)), closes [#12460](https://github.com/vuejs/core/issues/12460) [#12482](https://github.com/vuejs/core/issues/12482)
+* **runtime-core:** remove the placeholder of an unmounted pending async component ([#15982](https://github.com/vuejs/core/issues/15982)) ([2b9a0bb](https://github.com/vuejs/core/commit/2b9a0bbbb17166d91a1d394d9aae551a87360d41))
+* **runtime-core:** render nothing for a component whose async setup rejects ([#16111](https://github.com/vuejs/core/issues/16111)) ([f64bfa5](https://github.com/vuejs/core/commit/f64bfa57e0acba8150325abe598fe4e287e17692))
+* **runtime-core:** skip stopped error boundaries for async failures ([#16061](https://github.com/vuejs/core/issues/16061)) ([0326ed8](https://github.com/vuejs/core/commit/0326ed8df5b228f0b8f7c23782c26fcf4609d1ba))
+* **runtime-dom:** treat disablepictureinpicture and disableremoteplayback as boolean attributes ([#15952](https://github.com/vuejs/core/issues/15952)) ([ef81ddc](https://github.com/vuejs/core/commit/ef81ddcfc94399c043b349a986a1b231b6bac7d6))
+* **suspense:** do not mount the fallback after the boundary is unmounted ([#15939](https://github.com/vuejs/core/issues/15939)) ([4fd6a6b](https://github.com/vuejs/core/commit/4fd6a6b71dcb610711bad28643c3034f41eb4c87))
+* **suspense:** drop the unmount hooks of a pending branch when the boundary is unmounted ([d04b662](https://github.com/vuejs/core/commit/d04b66234c7aea96bd4c23aeb4f78d4f72d0c2f1))
+* **suspense:** enter transitions nested in the pending branch on reveal ([#16121](https://github.com/vuejs/core/issues/16121)) ([b8074de](https://github.com/vuejs/core/commit/b8074de608b241f17ea16a40637722ec720f2aff)), closes [#12435](https://github.com/vuejs/core/issues/12435) [#15294](https://github.com/vuejs/core/issues/15294)
+* **suspense:** keep a discarded component marked unmounted ([1dc8cdf](https://github.com/vuejs/core/commit/1dc8cdf9362ff20345bea6f456a0341e1506b577))
+* **suspense:** keep the async root update retry across a discarded pending branch ([#16107](https://github.com/vuejs/core/issues/16107)) ([06bea73](https://github.com/vuejs/core/commit/06bea732eb3db651cbe1feeb0a46e8e4c48ecf42))
+* **suspense:** keep the internal cleanup of a discarded component ([79b80b7](https://github.com/vuejs/core/commit/79b80b7a4b986f3e2ba4ec5bf73d345907a4fe59))
+* **suspense:** keep the timeout counting when the root is switched again while pending ([#16143](https://github.com/vuejs/core/issues/16143)) ([a045acd](https://github.com/vuejs/core/commit/a045acda24053a948e66e09d296a5133f0d34cec))
+* **suspense:** patch same-root updates of nested boundaries in retained content ([#16109](https://github.com/vuejs/core/issues/16109)) ([2dbcea8](https://github.com/vuejs/core/commit/2dbcea8fd10d6c314fd1b0ac9d0d32da912664f4)), closes [#15878](https://github.com/vuejs/core/issues/15878)
+* **suspense:** release parent dep on suspensible unmount ([#15870](https://github.com/vuejs/core/issues/15870)) ([46e5dbf](https://github.com/vuejs/core/commit/46e5dbf0f9cd2a4939732bca9dbcda31bf1fb9a3))
+* **suspense:** resolve async deps whose pending cycle was discarded ([#15980](https://github.com/vuejs/core/issues/15980)) ([f7d0811](https://github.com/vuejs/core/commit/f7d08114e0aea41da3380fc076049705b0c49574))
+* **suspense:** resolve the boundary when an async setup rejects without an error handler in dev ([#16110](https://github.com/vuejs/core/issues/16110)) ([a14aa0b](https://github.com/vuejs/core/commit/a14aa0bdc5d7640f4941db785d7a51ec7b005f13))
+* **suspense:** skip a root replacement in a retained nested boundary showing its fallback ([#16125](https://github.com/vuejs/core/issues/16125)) ([a47af77](https://github.com/vuejs/core/commit/a47af770142812f04a4637a616cea3dc0d072eaa))
+* **suspense:** skip the out-in afterLeave of an unmounted boundary ([#16115](https://github.com/vuejs/core/issues/16115)) ([85e71c0](https://github.com/vuejs/core/commit/85e71c01293a157dbcf6652da2c1ab1cbfed02d1)), closes [#11037](https://github.com/vuejs/core/issues/11037) [#11059](https://github.com/vuejs/core/issues/11059)
+* **transition:** handle leave immediately done in out-in mode ([#11824](https://github.com/vuejs/core/issues/11824)) ([70599b5](https://github.com/vuejs/core/commit/70599b52fbf1a9e91ee2bf112090c7e520937b56)), closes [#15727](https://github.com/vuejs/core/issues/15727)
+* **transition:** switch modes around a keyed suspense boundary ([#16124](https://github.com/vuejs/core/issues/16124)) ([ff0b341](https://github.com/vuejs/core/commit/ff0b341687dcd8699f1b29b4f64ab5f28c5f9b54))
+* **types:** add dialog closedby attribute ([#16064](https://github.com/vuejs/core/issues/16064)) ([24c9d0b](https://github.com/vuejs/core/commit/24c9d0bffb2299635b8112a978d74a38723aaa10))
+* **v-model:** respect number modifier for Set select values ([0ff253b](https://github.com/vuejs/core/commit/0ff253bfba3ee8d3d65448bd44ad890fd01b0ecd))
+
+### Performance Improvements
+
+* **compiler-sfc:** skip unused tsconfig include enumeration ([#15899](https://github.com/vuejs/core/issues/15899)) ([1612403](https://github.com/vuejs/core/commit/16124033bb800f3c0baa6557770eb781cb95a419)), closes [#15898](https://github.com/vuejs/core/issues/15898)
+* **compiler-ssr:** render static style attributes at compile time ([#16010](https://github.com/vuejs/core/issues/16010)) ([2629c89](https://github.com/vuejs/core/commit/2629c891931019ebb93faf9e9e7919a108b344e9))
+* mark internal initializers as pure ([#16012](https://github.com/vuejs/core/issues/16012)) ([34fbeb1](https://github.com/vuejs/core/commit/34fbeb16fc0029f39d29db94f3f783eddad7a9a6))
+* **runtime-core:** copy raw attrs when setup context attrs are passed as vnode props ([#16129](https://github.com/vuejs/core/issues/16129)) ([823c744](https://github.com/vuejs/core/commit/823c74459a0a9d76be623b5cc335d980dd2d5229))
+
+## [3.5.44](https://github.com/vuejs/core/compare/v3.5.43...v3.5.44) (2026-10-13)
+
+### Bug Fixes
+
+* **compat:** expose _setupProxy for Vue 2.7 compiled script setup (fix [#11164](https://github.com/vuejs/core/issues/11164)) ([#15618](https://github.com/vuejs/core/issues/15618)) ([f08059d](https://github.com/vuejs/core/commit/f08059d0ca8cf28b8258a6095f8760fa1804d333))
+* **compiler-core:** parenthesise v-for key in v-memo cache guard ([#15724](https://github.com/vuejs/core/issues/15724)) ([d084b90](https://github.com/vuejs/core/commit/d084b904903a7710ea19b7256b7c681e838eb63e)), closes [#15723](https://github.com/vuejs/core/issues/15723)
+* **compiler-dom:** correctly stringify `0` and `false` in `v-html` ([#15571](https://github.com/vuejs/core/issues/15571)) ([9f3b437](https://github.com/vuejs/core/commit/9f3b4377c4bb5ff32b35ff08ce7670f6be6f5dbb))
+* **compiler-dom:** inject transition persisted for v-show in production ([#15783](https://github.com/vuejs/core/issues/15783)) ([89cb272](https://github.com/vuejs/core/commit/89cb2724bf3423fc38dca68af3139d736e6b4833))
+* **compiler-sfc:** error when defineModel prop options reference a destructured prop ([#15604](https://github.com/vuejs/core/issues/15604)) ([38012a5](https://github.com/vuejs/core/commit/38012a5ad90a41c228e153774d089cba9515cf2d)), closes [#15602](https://github.com/vuejs/core/issues/15602)
+* **custom-element:** skip mounting an async custom element removed while its component loads ([#15777](https://github.com/vuejs/core/issues/15777)) ([0f8e7b4](https://github.com/vuejs/core/commit/0f8e7b40175059e262e0db232ae0c08b427486b5)), closes [#15775](https://github.com/vuejs/core/issues/15775)
+* **hydration:** observe children of a display: contents root in hydrateOnVisible ([#15773](https://github.com/vuejs/core/issues/15773)) ([7f688e8](https://github.com/vuejs/core/commit/7f688e84745558d95b836c0aac25c3ca3257e943))
+* **KeepAlive:** unmount pruned current component when its vnode was cloned on mount ([#15711](https://github.com/vuejs/core/issues/15711)) ([92798ac](https://github.com/vuejs/core/commit/92798ac0a8810283055478dab1e54569f3e94c23)), closes [#15710](https://github.com/vuejs/core/issues/15710)
+* **reactivity:** avoid mutating native array iterators ([#15703](https://github.com/vuejs/core/issues/15703)) ([7f9d45d](https://github.com/vuejs/core/commit/7f9d45d15bd10b6b9b136eb2b3a8879b449fec0d)), closes [#15643](https://github.com/vuejs/core/issues/15643)
+* **reactivity:** do not track deps in watcher callbacks run inside another effect ([#15782](https://github.com/vuejs/core/issues/15782)) ([db00fe9](https://github.com/vuejs/core/commit/db00fe9819eb17f0a5bde7e1fcfafe5984e267a3)), closes [#5009](https://github.com/vuejs/core/issues/5009)
+* **reactivity:** once watcher should stop when its callback throws ([#15755](https://github.com/vuejs/core/issues/15755)) ([ae4bd94](https://github.com/vuejs/core/commit/ae4bd94b6e5675f991696236dcc76a11d0597535))
+* **reactivity:** preserve shallow collection semantics ([#15793](https://github.com/vuejs/core/issues/15793)) ([b600466](https://github.com/vuejs/core/commit/b600466135e0910d142d14f56ffec933c1c420a2)), closes [#15792](https://github.com/vuejs/core/issues/15792)
+* **runtime-core:** detect new prop keys when comparing full props ([#15634](https://github.com/vuejs/core/issues/15634)) ([702fa61](https://github.com/vuejs/core/commit/702fa61be9344852989bcd178681adec13264469)), closes [#15632](https://github.com/vuejs/core/issues/15632)
+* **runtime-core:** keep async placeholder for block patching and pending component updates ([#15554](https://github.com/vuejs/core/issues/15554)) ([05ec25f](https://github.com/vuejs/core/commit/05ec25f835cc65058bac7a85e4a5eb8075ed3151)), closes [#15551](https://github.com/vuejs/core/issues/15551)
+* **runtime-core:** only flush jobs queued by the root render itself ([#15757](https://github.com/vuejs/core/issues/15757)) ([0bea14b](https://github.com/vuejs/core/commit/0bea14b962f1f6e27d2d994132efc2269945ab0f)), closes [#6728](https://github.com/vuejs/core/issues/6728)
+* **runtime-core:** render nothing for an invalid v-for range in production ([#15742](https://github.com/vuejs/core/issues/15742)) ([ad19e7d](https://github.com/vuejs/core/commit/ad19e7da3d58b772513ba3c2ded731eedb7d227d))
+* **runtime-dom:** preserve v-show display for unchanged style strings ([#15794](https://github.com/vuejs/core/issues/15794)) ([c0a6d3f](https://github.com/vuejs/core/commit/c0a6d3f2bbf80cf930f4c837409dbee95a149271))
+* **runtime-dom:** treat playsinline as a boolean attribute ([#15627](https://github.com/vuejs/core/issues/15627)) ([a084e44](https://github.com/vuejs/core/commit/a084e4486f1c4dc118518d43a1c7547031c53a5c))
+* **server-renderer:** propagate async setup errors ([#15857](https://github.com/vuejs/core/issues/15857)) ([6930374](https://github.com/vuejs/core/commit/693037486f38b3d3acf4cdf7b9850917c44cf9cb)), closes [#15716](https://github.com/vuejs/core/issues/15716)
+* **ssr:** honor falsy vnode content overrides ([#15769](https://github.com/vuejs/core/issues/15769)) ([c11c5c8](https://github.com/vuejs/core/commit/c11c5c8f07c8527b537b9ce6d801f80bbdd12129))
+* **suspense:** mount resolved async component with its own namespace ([#15640](https://github.com/vuejs/core/issues/15640)) ([2a086a2](https://github.com/vuejs/core/commit/2a086a2bee33abc30e20f8a3b0a2be418ae48967)), closes [#15639](https://github.com/vuejs/core/issues/15639)
+* **suspense:** skip rendering async components unmounted while pending ([4ab865a](https://github.com/vuejs/core/commit/4ab865a848a1da3d10fb674f857e5fff13094644))
+* **teleport:** move targetStart and keep children before targetAnchor ([#15818](https://github.com/vuejs/core/issues/15818)) ([d3c6e02](https://github.com/vuejs/core/commit/d3c6e02e7405b9dafa75b1007ca45fb376d45729)), closes [#15817](https://github.com/vuejs/core/issues/15817)
+* **transition-group:** measure nested groups against their moving outer item ([#15848](https://github.com/vuejs/core/issues/15848)) ([1936c87](https://github.com/vuejs/core/commit/1936c8791b61374fd21a99c99f450ee2b057b33e)), closes [#5385](https://github.com/vuejs/core/issues/5385) [#1531](https://github.com/vuejs/core/issues/1531)
+* **transition:** handle comment-wrapped component roots ([#15853](https://github.com/vuejs/core/issues/15853)) ([ff35014](https://github.com/vuejs/core/commit/ff3501429d4970c37194708b055492a56d9e5be5)), closes [#6080](https://github.com/vuejs/core/issues/6080) [#5500](https://github.com/vuejs/core/issues/5500)
+
+## [3.5.43](https://github.com/vuejs/core/compare/v3.5.42...v3.5.43) (2026-09-17)
+
+### Bug Fixes
+
+* **compiler-sfc:** ignore comment delimiters inside strings and url() when parsing css vars ([#15548](https://github.com/vuejs/core/issues/15548)) ([2fde323](https://github.com/vuejs/core/commit/2fde3239ca3cdb9b152870f695cd3401fcaada94))
+* **compiler-sfc:** prepend semicolon for await in switch case ([#15498](https://github.com/vuejs/core/issues/15498)) ([9a1df69](https://github.com/vuejs/core/commit/9a1df69b63fecd743919af89a419783dd030b9f7)), closes [#15495](https://github.com/vuejs/core/issues/15495)
+* **compiler-sfc:** restore await scope when leaving nested blocks ([5409708](https://github.com/vuejs/core/commit/54097087a0918b98f16c84599b1a6d654e952ca7)), closes [#15465](https://github.com/vuejs/core/issues/15465)
+* **compiler-sfc:** reuse parsed parent configs across tsconfig walks (fix [#15478](https://github.com/vuejs/core/issues/15478)) ([#15480](https://github.com/vuejs/core/issues/15480)) ([d6febaa](https://github.com/vuejs/core/commit/d6febaab8c0d95a6320e7e37276c00e8159e9cb2))
+* **hydration:** run leave hooks for hydration placeholders ([#15431](https://github.com/vuejs/core/issues/15431)) ([5dda192](https://github.com/vuejs/core/commit/5dda192082afa4985951d90e229324d522e25c22))
+* **reactivity:** preserve readonly wrappers in array copy methods ([#15469](https://github.com/vuejs/core/issues/15469)) ([599f35b](https://github.com/vuejs/core/commit/599f35bbb21f3d78b7aa0818342ab4f27442a333))
+* **runtime-core:** unmount v-once children after parent rerenders ([#15435](https://github.com/vuejs/core/issues/15435)) ([d720338](https://github.com/vuejs/core/commit/d720338d5d29c1fac82abbe6f7066fe703ce624d))
+* **shared:** handle circular references in looseEqual ([#15499](https://github.com/vuejs/core/issues/15499)) ([718f782](https://github.com/vuejs/core/commit/718f782b14c7e0165d20b6f4dd8664f78054b62c)), closes [#15496](https://github.com/vuejs/core/issues/15496)
+* **shared:** preserve comment-like text in style values ([#15471](https://github.com/vuejs/core/issues/15471)) ([b9456cb](https://github.com/vuejs/core/commit/b9456cb40db714a6f573a1713d92e96d4c9e9533))
+* **suspense:** don't drop nested suspense patches during hydration ([#15429](https://github.com/vuejs/core/issues/15429)) ([76d42dc](https://github.com/vuejs/core/commit/76d42dc1874e82e62e9650debd68a53472d810e0))
+* **suspense:** keep the boundary pending while its branch is patched ([#15411](https://github.com/vuejs/core/issues/15411)) ([bfcfe9e](https://github.com/vuejs/core/commit/bfcfe9e4d0254f85af452544a058291ef88dce1a)), closes [#7506](https://github.com/vuejs/core/issues/7506)
+* **suspense:** patch a hydrating boundary's pending branch in place ([#15432](https://github.com/vuejs/core/issues/15432)) ([2cde6f7](https://github.com/vuejs/core/commit/2cde6f754cb3e4695a21fb5719e0c75ee2fc5c61))
+* **suspense:** unmount the DOM an interrupted async component claimed ([#15430](https://github.com/vuejs/core/issues/15430)) ([fb9b45c](https://github.com/vuejs/core/commit/fb9b45ce780f656a23fcb374eb8ea9f7abadc594))
+* **types:** keep optional props when a runtime prop uses a generic PropType ([#15523](https://github.com/vuejs/core/issues/15523)) ([243aabc](https://github.com/vuejs/core/commit/243aabccf05fefb3760f2dab1c2d75aa424baad7)), closes [#9546](https://github.com/vuejs/core/issues/9546)
+
+## [3.5.42](https://github.com/vuejs/core/compare/v3.5.41...v3.5.42) (2026-08-27)
+
+### Bug Fixes
+
+* **hydration:** handle async component unmount before lazy hydration ([#15252](https://github.com/vuejs/core/issues/15252)) ([6e1814a](https://github.com/vuejs/core/commit/6e1814aa355aad8dd32a89873e95267297ae0609))
+* **hydration:** handle moving unresolved async fragment ([#15263](https://github.com/vuejs/core/issues/15263)) ([a72036f](https://github.com/vuejs/core/commit/a72036f66bcb9a4f3b3737cda19eeba1bc531e15))
+* **runtime-core:** avoid caching unmounted suspense children ([#15291](https://github.com/vuejs/core/issues/15291)) ([b535917](https://github.com/vuejs/core/commit/b535917d46d5c6e28c1d3b9185bfa1665127c73a)), closes [#15288](https://github.com/vuejs/core/issues/15288)
+* **runtime-core:** keep .trim result when combined with .number v-model modifier ([#15346](https://github.com/vuejs/core/issues/15346)) ([f8d42e1](https://github.com/vuejs/core/commit/f8d42e1cf2a0ccb43c50fad6e972cb130c53824e))
+* **runtime-core:** resolve $el for dev root comment fragment ([#15313](https://github.com/vuejs/core/issues/15313)) ([8654f35](https://github.com/vuejs/core/commit/8654f35118a1165ac30fd398ceaff8849c44d9d5)), closes [#12680](https://github.com/vuejs/core/issues/12680)
+* **runtime-dom:** support !important on CSS custom properties in style binding ([#15348](https://github.com/vuejs/core/issues/15348)) ([31da934](https://github.com/vuejs/core/commit/31da934fcbe73ab8ed187bf820c80b24ced474be))
+* **server-renderer:** reject CR in attribute names ([#15266](https://github.com/vuejs/core/issues/15266)) ([a2b40db](https://github.com/vuejs/core/commit/a2b40db9a83b36ed9da3a16403cf8f040262d73f))
+* **shared:** correctly compare Map and Set values ([#15328](https://github.com/vuejs/core/issues/15328)) ([ef82a26](https://github.com/vuejs/core/commit/ef82a26775952a665545d3771788bd23b2efec91)), closes [#15320](https://github.com/vuejs/core/issues/15320)
+* **suspense:** don't treat the leaving branch as the fallback while its mount is pending ([#15333](https://github.com/vuejs/core/issues/15333)) ([cd19745](https://github.com/vuejs/core/commit/cd1974562357dd73101d048f207a694a4e5310ec)), closes [#15332](https://github.com/vuejs/core/issues/15332)
+* **v-model:** re-sync select when model is overridden in change handler ([#15298](https://github.com/vuejs/core/issues/15298)) ([6eaecc1](https://github.com/vuejs/core/commit/6eaecc14d8151a7d258b80ce0519e5ecc17a2bef)), closes [#10505](https://github.com/vuejs/core/issues/10505)
+
+
+## [3.5.41](https://github.com/vuejs/core/compare/v3.5.40...v3.5.41) (2026-08-05)
+
+### Bug Fixes
+
+* **compiler-core:** preserve vnode lifecycle in stable v-for ([#11682](https://github.com/vuejs/core/issues/11682)) ([02421cd](https://github.com/vuejs/core/commit/02421cdbc4da5dd2eaf39e6c51aa790f9310db62)), closes [#9239](https://github.com/vuejs/core/issues/9239) [#12569](https://github.com/vuejs/core/issues/12569)
+* **compiler-sfc:** handle transformed template AST after cache invalidation ([#15136](https://github.com/vuejs/core/issues/15136)) ([a4440c0](https://github.com/vuejs/core/commit/a4440c01b96798a23bef12cb6f9ada5ffaba0d3a)), closes [#15126](https://github.com/vuejs/core/issues/15126) [#15128](https://github.com/vuejs/core/issues/15128)
+* **custom-element:** preserve nested async mount order ([#15154](https://github.com/vuejs/core/issues/15154)) ([71f9ff5](https://github.com/vuejs/core/commit/71f9ff58a2a8748b2c1ec26c55c89f7343b86110)), closes [#15153](https://github.com/vuejs/core/issues/15153)
+* **custom-element:** warn when props override native properties ([#12125](https://github.com/vuejs/core/issues/12125)) ([22b53ea](https://github.com/vuejs/core/commit/22b53eafecf56a9fb97f00b8e8b69c90a073d2d4)), closes [#12124](https://github.com/vuejs/core/issues/12124)
+* **runtime-core:** avoid re-fetching resource props with unchanged values ([#15105](https://github.com/vuejs/core/issues/15105)) ([a7513a1](https://github.com/vuejs/core/commit/a7513a1a3ed411ccd90bf135c6cba9c9cb2ef10b))
+* **runtime-core:** restore SSR setup state when handling async setup result ([#15114](https://github.com/vuejs/core/issues/15114)) ([b6191cb](https://github.com/vuejs/core/commit/b6191cbf95c680e076164a319dd987a14de658c1)), closes [#15113](https://github.com/vuejs/core/issues/15113)
+* **scheduler:** avoid stack overflow when flushing very large post cb arrays ([#15143](https://github.com/vuejs/core/issues/15143)) ([c04a45d](https://github.com/vuejs/core/commit/c04a45d15498ebba0de3ceae674b88ac43cb9e76)), closes [#15142](https://github.com/vuejs/core/issues/15142)
+* **slots:** handle nullish v-bind slot props ([#15177](https://github.com/vuejs/core/issues/15177)) ([2506700](https://github.com/vuejs/core/commit/2506700b289c5277eb465bf959ce0ea23329094d))
+* **ssr:** normalize hidden states during hydration ([#13125](https://github.com/vuejs/core/issues/13125)) ([4e467d7](https://github.com/vuejs/core/commit/4e467d7ae2cd7d0af031fac8865dcff73cb1cf16))
+* **transition:** support transition to teleport component child ([#11959](https://github.com/vuejs/core/issues/11959)) ([77061fe](https://github.com/vuejs/core/commit/77061fe88608a5ab77fec705ff65cb81779eb01c)), closes [#11910](https://github.com/vuejs/core/issues/11910)
+* **types:** preserve defineModel inference with factory defaults ([#15097](https://github.com/vuejs/core/issues/15097)) ([0516c43](https://github.com/vuejs/core/commit/0516c43284084f0526032a1cc312fb6916bf04fe)), closes [#15096](https://github.com/vuejs/core/issues/15096)
+* **v-model:** preserve text input before hydration ([#14411](https://github.com/vuejs/core/issues/14411)) ([2468464](https://github.com/vuejs/core/commit/2468464798a0fc050f86f8fa0bb96a34851bd824)), closes [#14403](https://github.com/vuejs/core/issues/14403)
+
+## [3.5.40](https://github.com/vuejs/core/compare/v3.5.39...v3.5.40) (2026-07-16)
+
+### Bug Fixes
+
+* **compiler-core:** avoid leaking slot branch keys ([#15051](https://github.com/vuejs/core/issues/15051)) ([20c9d26](https://github.com/vuejs/core/commit/20c9d263d3bfafdfbcc1921f259fd8f711e18659)), closes [#15048](https://github.com/vuejs/core/issues/15048)
+* **hydration:** pass namespace when patching dynamic props ([#15082](https://github.com/vuejs/core/issues/15082)) ([e0d2723](https://github.com/vuejs/core/commit/e0d27234ddd2061383cb5dcc475d6b9558ed8e4f)), closes [#15081](https://github.com/vuejs/core/issues/15081) [#15050](https://github.com/vuejs/core/issues/15050)
+* **reactivity:** handle effect removal during scope stop ([#15084](https://github.com/vuejs/core/issues/15084)) ([378f978](https://github.com/vuejs/core/commit/378f9783248a4a4f20781d665d4f7089f39cae6e)), closes [#15083](https://github.com/vuejs/core/issues/15083)
+* **runtime-core:** skip lazy hydration for detached roots ([#15092](https://github.com/vuejs/core/issues/15092)) ([97f3525](https://github.com/vuejs/core/commit/97f3525551ad06103083eb2cbf9858c5e57cd58e)), closes [#15091](https://github.com/vuejs/core/issues/15091)
+* **runtime-core:** unwind dangling blocks when slot content throws ([#15071](https://github.com/vuejs/core/issues/15071)) ([ddc132d](https://github.com/vuejs/core/commit/ddc132d7c054ecd2029ddcc95bcba770cd44f022)), closes [#15070](https://github.com/vuejs/core/issues/15070)
+* **runtime-dom:** respect current select model type ([#15010](https://github.com/vuejs/core/issues/15010)) ([eb89e93](https://github.com/vuejs/core/commit/eb89e935a771ab7fc3f8e67a82bc8fc7ea28bdaa)), closes [#15009](https://github.com/vuejs/core/issues/15009)
+* **server-renderer:** handle errors in optimized component renders ([#12601](https://github.com/vuejs/core/issues/12601)) ([474907c](https://github.com/vuejs/core/commit/474907c0f01d021c564545137051a2b56eb4a769)), closes [#12575](https://github.com/vuejs/core/issues/12575)
+* **server-renderer:** remove package dependency cycle ([#15063](https://github.com/vuejs/core/issues/15063)) ([4d35eca](https://github.com/vuejs/core/commit/4d35ecadb6f625b0f7407ccee0e357c2dd8084c7))
+* **shared:** prevent SSR comment escaping from creating closing delimiters ([#15045](https://github.com/vuejs/core/issues/15045)) ([bd962bb](https://github.com/vuejs/core/commit/bd962bbaca746d8f65775a07723420406ebad0da))
+* **types:** don't constrain component $el type to Element ([#15040](https://github.com/vuejs/core/issues/15040)) ([164460a](https://github.com/vuejs/core/commit/164460a52988c44dc34a541219c88120078372a0))
+
+## [3.5.39](https://github.com/vuejs/core/compare/v3.5.38...v3.5.39) (2026-06-25)
+
+
+### Bug Fixes
+
+* **compiler-core:** correct filter rewrite recursion ([#14959](https://github.com/vuejs/core/issues/14959)) ([be7ce31](https://github.com/vuejs/core/commit/be7ce314b96256f1c56f53088d51ed6bc77fde28))
+* **hydration:** force patch dynamic props when hydrating ([#9083](https://github.com/vuejs/core/issues/9083)) ([024cf06](https://github.com/vuejs/core/commit/024cf06daa33db4660431f20aa050acb99cff07f)), closes [#9033](https://github.com/vuejs/core/issues/9033)
+* **hydration:** respect data-allow-mismatch on conditional branches ([#12801](https://github.com/vuejs/core/issues/12801)) ([164af63](https://github.com/vuejs/core/commit/164af639a120421194f7afe0e097bdf254c90199)), closes [#12782](https://github.com/vuejs/core/issues/12782)
+* **reactivity:** avoid triggering effects when set fails ([#14964](https://github.com/vuejs/core/issues/14964)) ([e450973](https://github.com/vuejs/core/commit/e450973eabc0038f398344b981acd8759c246c50))
+* **runtime-core:** handle non-isomorphic block element update ([#15002](https://github.com/vuejs/core/issues/15002)) ([932ddd0](https://github.com/vuejs/core/commit/932ddd058d69be9bbd8cd796c89f0d1a4fc128d7)), closes [#6385](https://github.com/vuejs/core/issues/6385)
+* **runtime-core:** normalize function children for elements and Teleport ([#9108](https://github.com/vuejs/core/issues/9108)) ([2f374cd](https://github.com/vuejs/core/commit/2f374cda18cbe331ede1a49a324b423c75d0faf3)), closes [#9107](https://github.com/vuejs/core/issues/9107)
+* **runtime-core:** pause tracking when invoking function refs ([#14985](https://github.com/vuejs/core/issues/14985)) ([3ac052b](https://github.com/vuejs/core/commit/3ac052b6b1e9d3978e98cc30a1a89a9b9b51358b))
+* **runtime-core:** preserve once event listener name ([#8341](https://github.com/vuejs/core/issues/8341)) ([87b73b6](https://github.com/vuejs/core/commit/87b73b64a0d9b4e2dd2dacfe98f2f1c2396d7a61)), closes [#8342](https://github.com/vuejs/core/issues/8342)
+* **runtime-dom:** preserve option modifier event names ([#8338](https://github.com/vuejs/core/issues/8338)) ([4b659e6](https://github.com/vuejs/core/commit/4b659e699925555464ea9ae8fa3e1984609f6dc2)), closes [#8334](https://github.com/vuejs/core/issues/8334)
+* **ssr:** dedupe inherited scope ids during vnode rendering ([#15005](https://github.com/vuejs/core/issues/15005)) ([027da6b](https://github.com/vuejs/core/commit/027da6b2810c4752131439d2645f3d931d07242f)), closes [#12159](https://github.com/vuejs/core/issues/12159) [#12175](https://github.com/vuejs/core/issues/12175)
+* **ssr:** resolve nested async teleport content ([#9431](https://github.com/vuejs/core/issues/9431)) ([31d0f23](https://github.com/vuejs/core/commit/31d0f23757afb410c638a9c29d44d76d0944e18f)), closes [#6207](https://github.com/vuejs/core/issues/6207)
+* **teleport:** handle teleport unmount edge case ([#12705](https://github.com/vuejs/core/issues/12705)) ([671997a](https://github.com/vuejs/core/commit/671997ade74e34880cebe3c340269b8598c3b26c)), closes [#12702](https://github.com/vuejs/core/issues/12702)
+* **types:** support named tuple emits ([#12676](https://github.com/vuejs/core/issues/12676)) ([232f402](https://github.com/vuejs/core/commit/232f4022e3160b30b11748a6d97ea2c15ed3b74f)), closes [#12673](https://github.com/vuejs/core/issues/12673)
+* **types:** validate defineModel defaults ([#14968](https://github.com/vuejs/core/issues/14968)) ([747f57e](https://github.com/vuejs/core/commit/747f57e9cdb3c5f084f8da5ca7e0e0b7b326b662)), closes [#14966](https://github.com/vuejs/core/issues/14966)
+
+## [3.5.38](https://github.com/vuejs/core/compare/v3.5.37...v3.5.38) (2026-06-11)
+
+## [3.5.37](https://github.com/vuejs/core/compare/v3.5.36...v3.5.37) (2026-06-11)
+
+## [3.5.36](https://github.com/vuejs/core/compare/v3.5.35...v3.5.36) (2026-06-11)
+
+
+### Bug Fixes
+
+* **compiler-core:** avoid crash on CDATA at the document root ([#14916](https://github.com/vuejs/core/issues/14916)) ([0ea17e2](https://github.com/vuejs/core/commit/0ea17e232f9a8f4a9acf57c6addc78cf4f279c13))
+* **compiler-core:** prefix dynamic keys on v-memo elements ([#14922](https://github.com/vuejs/core/issues/14922)) ([68e978e](https://github.com/vuejs/core/commit/68e978e3e71a8ae40701808e78966f2168c5907c)), closes [#14920](https://github.com/vuejs/core/issues/14920)
+* **compiler-sfc:** handle vue-ignore on leading intersection/union type ([#14950](https://github.com/vuejs/core/issues/14950)) ([0dcd225](https://github.com/vuejs/core/commit/0dcd225c01f211ebb8ce4dda8c8eac10539abf1a)), closes [#12254](https://github.com/vuejs/core/issues/12254)
+* **compiler-sfc:** respect var hoisting in props destructure ([48ad452](https://github.com/vuejs/core/commit/48ad452dd61926a59e358da3c74c5ef750ae21c4))
+* **reactivity:** preserve watch callback return value when wrapped for `once: true` ([#14902](https://github.com/vuejs/core/issues/14902)) ([450a8a8](https://github.com/vuejs/core/commit/450a8a8e45520f30fe8343c5016a777d888e53fc))
+* **runtime-core:** add dev warning for silent catch in compat mode and fix test description typo ([#14891](https://github.com/vuejs/core/issues/14891)) ([db3e117](https://github.com/vuejs/core/commit/db3e117025a7193291ed6676180a5a44bbe0ae76))
+* **runtime-core:** force model update when reverted before sync ([#14897](https://github.com/vuejs/core/issues/14897)) ([7f76378](https://github.com/vuejs/core/commit/7f76378b0d178a29113ee07d67faa48b637944e8)), closes [#13524](https://github.com/vuejs/core/issues/13524)
+* **runtime-core:** skip async component callbacks after unmount ([#14911](https://github.com/vuejs/core/issues/14911)) ([5300ead](https://github.com/vuejs/core/commit/5300ead57b3c14942d4c155ef5e485d5409e7f02))
+* **transition:** avoid move transition for hidden v-show group children ([#14895](https://github.com/vuejs/core/issues/14895)) ([c11f6ee](https://github.com/vuejs/core/commit/c11f6ee644412edf3eef6736991e895e4a3e1dde)), closes [#14894](https://github.com/vuejs/core/issues/14894)
+* **watch:** trigger immediate callback for empty sources ([#14914](https://github.com/vuejs/core/issues/14914)) ([1f2ca7e](https://github.com/vuejs/core/commit/1f2ca7e4837b1b0de0b91048fffdb03710c0b03e)), closes [#14898](https://github.com/vuejs/core/issues/14898)
+
+## [3.5.35](https://github.com/vuejs/core/compare/v3.5.34...v3.5.35) (2026-05-27)
+
+
+### Bug Fixes
+
+* **compiler-core:** avoid double processing v-for keys with v-memo ([#14861](https://github.com/vuejs/core/issues/14861)) ([34a0ded](https://github.com/vuejs/core/commit/34a0ded4d27289a8f227462bd35b6341a4b51831)), closes [#14859](https://github.com/vuejs/core/issues/14859)
+* **compiler-sfc:** resolve top-level exports from files registered as global types ([#14805](https://github.com/vuejs/core/issues/14805)) ([3d077f2](https://github.com/vuejs/core/commit/3d077f26e33510f2ba001d14142ba76a1414dfff)), closes [nuxt/nuxt#33694](https://github.com/nuxt/nuxt/issues/33694)
+* **runtime-core:** avoid repeated hydration mismatch checks ([#14857](https://github.com/vuejs/core/issues/14857)) ([170fc95](https://github.com/vuejs/core/commit/170fc95eb64b97024dcb3df770557065e2919aa8)), closes [#14855](https://github.com/vuejs/core/issues/14855)
+* **runtime-core:** skip idle persisted transition hooks in keep-alive moves ([#14865](https://github.com/vuejs/core/issues/14865)) ([80fc139](https://github.com/vuejs/core/commit/80fc139f90513943f1d0da20d353feec8a9ec894)), closes [#14031](https://github.com/vuejs/core/issues/14031)
+* **server-renderer:** propagate sync errors from `ssrRenderSuspense` ([#14804](https://github.com/vuejs/core/issues/14804)) ([4760997](https://github.com/vuejs/core/commit/47609975e294fbcc8017b6d68c9be38fa5508f36)), closes [nuxt/nuxt#28162](https://github.com/nuxt/nuxt/issues/28162)
+* **teleport:** skip child unmount when pending mount discarded ([#14876](https://github.com/vuejs/core/issues/14876)) ([#14877](https://github.com/vuejs/core/issues/14877)) ([584beb1](https://github.com/vuejs/core/commit/584beb1262d1247d41ed3b463c485c57022fa922))
+
+
+### Performance Improvements
+
+* **reactivity:** skip type checks for cached proxies ([#14860](https://github.com/vuejs/core/issues/14860)) ([5734fe9](https://github.com/vuejs/core/commit/5734fe97f6e42d7abb1893c8bc38a17f7deb00b1))
+* **runtime-dom:** optimize array event handler dispatch ([#14828](https://github.com/vuejs/core/issues/14828)) ([bb18dc8](https://github.com/vuejs/core/commit/bb18dc8e567ce22f1e5dfbc6b16c1003b48c2785))
+* **server-renderer:** avoid materializing iterables in ssrRenderList ([#14821](https://github.com/vuejs/core/issues/14821)) ([1b7a2cc](https://github.com/vuejs/core/commit/1b7a2cc15c501a4b1e4be61874879381af59b74f))
+
+## [3.5.34](https://github.com/vuejs/core/compare/v3.5.33...v3.5.34) (2026-05-06)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** infer Vue ref wrapper types when source is unresolvable ([#14758](https://github.com/vuejs/core/issues/14758)) ([7f46fd4](https://github.com/vuejs/core/commit/7f46fd411b4e3f75ca755ee1318ea8e9aff43f56)), closes [#14729](https://github.com/vuejs/core/issues/14729)
+* **compiler-sfc:** preserve hash hrefs on `<image>` elements ([#14756](https://github.com/vuejs/core/issues/14756)) ([090b2e3](https://github.com/vuejs/core/commit/090b2e3a5149ec951c5313b270e5400a1fc870ce))
+* **compiler-sfc:** resolve type re-exports inside declare global ([#14766](https://github.com/vuejs/core/issues/14766)) ([acfffe3](https://github.com/vuejs/core/commit/acfffe34e7724a84c21bb8e51e8a5bc0da35f350))
+* **reactivity:** prevent orphan effect when created in a stopped scope ([#14778](https://github.com/vuejs/core/issues/14778)) ([c8e2d4a](https://github.com/vuejs/core/commit/c8e2d4adc9112d2529de0434acc1188dfc399bf4)), closes [#14777](https://github.com/vuejs/core/issues/14777)
+* **runtime-core:** avoid symbol coercion during props validation ([#8539](https://github.com/vuejs/core/issues/8539)) ([23d4fb5](https://github.com/vuejs/core/commit/23d4fb5a6a070df3d2d4a043f0f62c141e376095)), closes [#8487](https://github.com/vuejs/core/issues/8487)
+* **suspense:** avoid DOM leak with out-in transition in v-if fragment ([#14762](https://github.com/vuejs/core/issues/14762)) ([9667e0d](https://github.com/vuejs/core/commit/9667e0d498ab39273614682986a666c3e73024d9)), closes [#14761](https://github.com/vuejs/core/issues/14761)
+
+## [3.5.33](https://github.com/vuejs/core/compare/v3.5.32...v3.5.33) (2026-04-22)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** handle nested :deep in selector pseudos ([#14725](https://github.com/vuejs/core/issues/14725)) ([bb9d265](https://github.com/vuejs/core/commit/bb9d265d8dcdde2af824fc01b24f9a7b3169f5fa)), closes [#14724](https://github.com/vuejs/core/issues/14724)
+* **reactivity:** unlink effect scopes on out-of-order off ([#14734](https://github.com/vuejs/core/issues/14734)) ([e7659be](https://github.com/vuejs/core/commit/e7659beafc5407e892fa70f3f4ade80263b0905d)), closes [#14733](https://github.com/vuejs/core/issues/14733)
+* **runtime-dom:** preserve textarea resize dimensions ([#14747](https://github.com/vuejs/core/issues/14747)) ([11fb2fd](https://github.com/vuejs/core/commit/11fb2fd4a246e40f6f350701dfea73ec525b4f59)), closes [#14741](https://github.com/vuejs/core/issues/14741)
+* **teleport:** don't move teleport children if not mounted ([#14702](https://github.com/vuejs/core/issues/14702)) ([6a61f44](https://github.com/vuejs/core/commit/6a61f4452ba1a31fc929cadf8abe3337ac4d3a46)), closes [#14701](https://github.com/vuejs/core/issues/14701)
+* **transition:** preserve placeholder for conditional explicit default slots ([#14748](https://github.com/vuejs/core/issues/14748)) ([45990ce](https://github.com/vuejs/core/commit/45990cecf4604b2f39c571ab6aefa49d362af36a)), closes [#14727](https://github.com/vuejs/core/issues/14727)
+
+
+
+## [3.5.32](https://github.com/vuejs/core/compare/v3.5.31...v3.5.32) (2026-04-03)
+
+
+### Bug Fixes
+
+* **runtime-core:** prevent currentInstance leak into sibling render during async setup re-entry ([#14668](https://github.com/vuejs/core/issues/14668)) ([f166353](https://github.com/vuejs/core/commit/f1663535a163057788d3285dec54a245c3efb3ad)), closes [#14667](https://github.com/vuejs/core/issues/14667)
+* **teleport:** handle updates before deferred mount ([#14642](https://github.com/vuejs/core/issues/14642)) ([32b44f1](https://github.com/vuejs/core/commit/32b44f19f67aa30899817a7e79a4510f3b52970a)), closes [#14640](https://github.com/vuejs/core/issues/14640)
+* **types:** allow customRef to have different getter/setter types ([#14639](https://github.com/vuejs/core/issues/14639)) ([e20ddb0](https://github.com/vuejs/core/commit/e20ddb00188e9935884930046fa572eab7c9dcba))
+* **types:** use private branding for shallowReactive ([#14641](https://github.com/vuejs/core/issues/14641)) ([302c47a](https://github.com/vuejs/core/commit/302c47a4994bc8b47b8a2af6693d8cb6bbd4b06b)), closes [#14638](https://github.com/vuejs/core/issues/14638) [#14493](https://github.com/vuejs/core/issues/14493)
+
+
+### Reverts
+
+* Revert "fix(server-renderer): cleanup component effect scopes after SSR render" (#14674) ([219d83b](https://github.com/vuejs/core/commit/219d83bd305ce6fc052941acaaf02e7bc70616a4)), closes [#14674](https://github.com/vuejs/core/issues/14674) [#14669](https://github.com/vuejs/core/issues/14669)
+
+
+
+## [3.5.31](https://github.com/vuejs/core/compare/v3.5.30...v3.5.31) (2026-03-25)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** allow Node.js subpath imports patterns in asset urls ([#13045](https://github.com/vuejs/core/issues/13045)) ([95c3356](https://github.com/vuejs/core/commit/95c33560c9af369d44a7670d0c3b93fb62323be2)), closes [#9919](https://github.com/vuejs/core/issues/9919)
+* **compiler-sfc:** support template literal as defineModel name ([#14622](https://github.com/vuejs/core/issues/14622)) ([bd7eef0](https://github.com/vuejs/core/commit/bd7eef0161d69bccd48ac303bc6a56ba8d718e2d)), closes [#14621](https://github.com/vuejs/core/issues/14621)
+* **reactivity:** normalize toRef property keys before dep lookup + improve types ([#14625](https://github.com/vuejs/core/issues/14625)) ([1bb28d0](https://github.com/vuejs/core/commit/1bb28d011b31bc75c80d2860bc6484cceec1ff20)), closes [#12427](https://github.com/vuejs/core/issues/12427) [#12431](https://github.com/vuejs/core/issues/12431)
+* **runtime-core:** invalidate detached v-for memo vnodes after unmount ([#14624](https://github.com/vuejs/core/issues/14624)) ([560def4](https://github.com/vuejs/core/commit/560def426fc38c1710fda7ddd1ac634d67897960)), closes [#12708](https://github.com/vuejs/core/issues/12708) [#12710](https://github.com/vuejs/core/issues/12710)
+* **runtime-core:** preserve nullish event handlers in mergeProps ([#14550](https://github.com/vuejs/core/issues/14550)) ([5725222](https://github.com/vuejs/core/commit/5725222a6bc5d1dd032318349ce0c540b1d63a49))
+* **runtime-core:** prevent merging model listener when value is null or undefined ([#14629](https://github.com/vuejs/core/issues/14629)) ([b39e032](https://github.com/vuejs/core/commit/b39e0329f67354702f4e417e55c15c61d2439657))
+* **runtime-dom:** defer teleport mount/update until suspense resolves ([#8619](https://github.com/vuejs/core/issues/8619)) ([88ed045](https://github.com/vuejs/core/commit/88ed04501555b9257df8d7ad86d844c2c2136e50)), closes [#8603](https://github.com/vuejs/core/issues/8603)
+* **runtime-dom:** handle activeElement check in Shadow DOM for v-model ([#14196](https://github.com/vuejs/core/issues/14196)) ([959ded2](https://github.com/vuejs/core/commit/959ded22ab7ea1453f607e0964e1fb6748ece6c7))
+* **server-renderer:** cleanup component effect scopes after SSR render ([#14548](https://github.com/vuejs/core/issues/14548)) ([862f11e](https://github.com/vuejs/core/commit/862f11ee017d51cb9573a8c0642055b3b17cace8))
+* **suspense:** avoid unmount activeBranch twice if wrapped in transition ([#9392](https://github.com/vuejs/core/issues/9392)) ([908c6ad](https://github.com/vuejs/core/commit/908c6ad05e1c76ae690d2e50f3bd28278af07e22)), closes [#7966](https://github.com/vuejs/core/issues/7966)
+* **suspense:** update suspense vnode's el during branch self-update ([#12922](https://github.com/vuejs/core/issues/12922)) ([a2c1700](https://github.com/vuejs/core/commit/a2c17004c84e5ce3c4e82e35b806ba381144eed3)), closes [#12920](https://github.com/vuejs/core/issues/12920)
+* **transition:** skip enter guard while hmr updating ([#14611](https://github.com/vuejs/core/issues/14611)) ([be0a2f1](https://github.com/vuejs/core/commit/be0a2f1a7fc3d81d05638798cc628848cfa62cef)), closes [#14608](https://github.com/vuejs/core/issues/14608)
+* **types:** prevent shallowReactive marker from leaking into value unions ([#14493](https://github.com/vuejs/core/issues/14493)) ([3b561db](https://github.com/vuejs/core/commit/3b561db4ab42d06166b002f13c0e97cb2bd4a061)), closes [#14490](https://github.com/vuejs/core/issues/14490)
+
+
+
+## [3.5.30](https://github.com/vuejs/core/compare/v3.5.29...v3.5.30) (2026-03-09)
+
+
+### Bug Fixes
+
+* **compat:** add `entities` to @vue/compat deps to fix CJS edge cases ([#12514](https://github.com/vuejs/core/issues/12514)) ([e725a67](https://github.com/vuejs/core/commit/e725a679e434a688c3493fc9af496501a8d1eeec)), closes [#10609](https://github.com/vuejs/core/issues/10609)
+* **custom-element:** ensure child component styles are injected in correct order before parent styles ([#13374](https://github.com/vuejs/core/issues/13374)) ([1398bf8](https://github.com/vuejs/core/commit/1398bf8dfbfef6b1bca154fc98d37044011a51be)), closes [#13029](https://github.com/vuejs/core/issues/13029)
+* **custom-element:** properly locate parent when slotted in shadow dom ([#12480](https://github.com/vuejs/core/issues/12480)) ([f06c81a](https://github.com/vuejs/core/commit/f06c81aa3dddbeff8bc2e2e63c0b6b6debcbdc13)), closes [#12479](https://github.com/vuejs/core/issues/12479)
+* **custom-element:** should properly patch as props for vue custom elements ([#12409](https://github.com/vuejs/core/issues/12409)) ([740983e](https://github.com/vuejs/core/commit/740983e6736255b183ee27a3f8b40e89ad7e3ba3)), closes [#12408](https://github.com/vuejs/core/issues/12408)
+* **reactivity:** avoid duplicate raw/proxy entries in Set.add ([#14545](https://github.com/vuejs/core/issues/14545)) ([d943612](https://github.com/vuejs/core/commit/d943612e59feb656e16568dea77b97856923c58c))
+* **reactivity:** fix reduce on reactive arrays to preserve reactivity ([#12737](https://github.com/vuejs/core/issues/12737)) ([16ef165](https://github.com/vuejs/core/commit/16ef165415224def18ec8247dabb84d5a1338c17)), closes [#12735](https://github.com/vuejs/core/issues/12735)
+* **reactivity:** handle `Set` with initial reactive values edge case ([#12393](https://github.com/vuejs/core/issues/12393)) ([5dc27ca](https://github.com/vuejs/core/commit/5dc27ca68fdbab95b37af15870d91515fc2412b2)), closes [#8647](https://github.com/vuejs/core/issues/8647)
+* **runtime-core:** warn about negative number in v-for ([#12308](https://github.com/vuejs/core/issues/12308)) ([9438cc5](https://github.com/vuejs/core/commit/9438cc54506a38038a1bf4b6698025f9a4cafb48))
+* **ssr:** prevent watch from firing after async setup await ([#14547](https://github.com/vuejs/core/issues/14547)) ([6cda71d](https://github.com/vuejs/core/commit/6cda71d48bd45c5e0ed2822866b83c4fafff1be9)), closes [#14546](https://github.com/vuejs/core/issues/14546)
+* **types:** make generics with runtime props in defineComponent work (fix [#11374](https://github.com/vuejs/core/issues/11374)) ([#13119](https://github.com/vuejs/core/issues/13119)) ([cea3cf7](https://github.com/vuejs/core/commit/cea3cf758645c9683db51822590b073ce3069dda)), closes [#13763](https://github.com/vuejs/core/issues/13763)
+* **types:** narrow useAttrs class/style typing for TSX ([#14492](https://github.com/vuejs/core/issues/14492)) ([bbb8977](https://github.com/vuejs/core/commit/bbb89775b137eac12b92ae4eb49999a7fd6b52b0)), closes [#14489](https://github.com/vuejs/core/issues/14489)
+
+
+
+## [3.5.29](https://github.com/vuejs/core/compare/v3.5.28...v3.5.29) (2026-02-24)
+
+
+### Bug Fixes
+
+* **runtime-core:** prevent instance leak in withAsyncContext ([#14445](https://github.com/vuejs/core/issues/14445)) ([702284f](https://github.com/vuejs/core/commit/702284f6a7d0dd6d4e648142e7977a3eb02d77f5)), closes [nuxt/nuxt#33644](https://github.com/nuxt/nuxt/issues/33644)
+* **server-renderer:** render className as escaped string ([#14469](https://github.com/vuejs/core/issues/14469)) ([da6690c](https://github.com/vuejs/core/commit/da6690cae359ec3576403c18040a1a5f017a63b1))
+* **transition:** prevent enter if leave is in progress ([#14443](https://github.com/vuejs/core/issues/14443)) ([df059f8](https://github.com/vuejs/core/commit/df059f890460e4c703b62a54f410627ff29c489b)), closes [#12091](https://github.com/vuejs/core/issues/12091) [#12133](https://github.com/vuejs/core/issues/12133)
+
+
+
+## [3.5.28](https://github.com/vuejs/core/compare/v3.5.27...v3.5.28) (2026-02-09)
+
+
+### Bug Fixes
+
+* **transition:** avoid unexpected `cancelled` parameter in transition `done` callback ([#14391](https://github.com/vuejs/core/issues/14391)) ([6798853](https://github.com/vuejs/core/commit/67988530f6a3cfdd0d80bf967033cb9abf377174))
+* **compiler-sfc:** add resolution trying for `.mts/.cts` files ([#14402](https://github.com/vuejs/core/issues/14402)) ([c09d41f](https://github.com/vuejs/core/commit/c09d41ffe150903b1fcd69a6f6bdeea2d2c6c243)), closes [vuejs/router#2611](https://github.com/vuejs/router/issues/2611)
+* **compiler-sfc:** no params were generated when using withDefaults ([#12823](https://github.com/vuejs/core/issues/12823)) ([b0a1f05](https://github.com/vuejs/core/commit/b0a1f0504a67fb1a6a110a5d05cdec0b878dde29)), closes [#12822](https://github.com/vuejs/core/issues/12822)
+* **reactivity:** add `__v_skip` flag to `EffectScope` to prevent reactive conversion ([#14359](https://github.com/vuejs/core/issues/14359)) ([48b7552](https://github.com/vuejs/core/commit/48b7552cce784725376a4fab078272676ce02d69)), closes [#14357](https://github.com/vuejs/core/issues/14357)
+* **runtime-core:** avoid retaining el on cached text vnodes during static traversal ([#14419](https://github.com/vuejs/core/issues/14419)) ([4ace79a](https://github.com/vuejs/core/commit/4ace79ac4c66a4f96cd330b47474ce117bc851ab)), closes [#14134](https://github.com/vuejs/core/issues/14134)
+* **runtime-core:** prevent child component updates when style remains unchanged ([#12825](https://github.com/vuejs/core/issues/12825)) ([57866b5](https://github.com/vuejs/core/commit/57866b5af1aff7ce1026b529443b81465c56f802)), closes [#12826](https://github.com/vuejs/core/issues/12826)
+* **runtime-core:** properly handle async component update before resolve ([#11619](https://github.com/vuejs/core/issues/11619)) ([e71c26c](https://github.com/vuejs/core/commit/e71c26c03d44c9c93569ed7ebfe7dabaf3bbdb06)), closes [#11617](https://github.com/vuejs/core/issues/11617)
+* **runtime-dom:** handle null/undefined handler in withModifiers ([#14362](https://github.com/vuejs/core/issues/14362)) ([261de54](https://github.com/vuejs/core/commit/261de547cd6685fc8862679941d93b530d504731)), closes [#14361](https://github.com/vuejs/core/issues/14361)
+* **teleport:** properly handling disabled teleport target anchor ([#14417](https://github.com/vuejs/core/issues/14417)) ([d7bcd85](https://github.com/vuejs/core/commit/d7bcd858883d90a1593b45cdc43f9fa55bc790bc)), closes [#14412](https://github.com/vuejs/core/issues/14412)
+* **transition-group:** correct move translation under scale via element rect ([#14360](https://github.com/vuejs/core/issues/14360)) ([0243a79](https://github.com/vuejs/core/commit/0243a792ac1cf8b0308f552927ed2ecd8627b839)), closes [#14356](https://github.com/vuejs/core/issues/14356)
+* **useTemplateRef:** don't update setup ref for useTemplateRef key ([#12756](https://github.com/vuejs/core/issues/12756)) ([fc40ca0](https://github.com/vuejs/core/commit/fc40ca0216a7028f6ec0195344c976423e239ef3)), closes [#12749](https://github.com/vuejs/core/issues/12749)
+
+
+
+## [3.5.27](https://github.com/vuejs/core/compare/v3.5.26...v3.5.27) (2026-01-19)
+
+
+### Bug Fixes
+
+* **compile-sfc:** correctly handle variable shadowing in for loop for `defineProps` destructuring. ([#14296](https://github.com/vuejs/core/issues/14296)) ([6a1bb50](https://github.com/vuejs/core/commit/6a1bb50594db03904f401fc33ea85afa8fa71cf7)), closes [#14294](https://github.com/vuejs/core/issues/14294)
+* **compiler-sfc:** handle indexed access types in declare global blocks ([#14260](https://github.com/vuejs/core/issues/14260)) ([e4091fe](https://github.com/vuejs/core/commit/e4091fe1f917346a66ffa8d013b3cf4b331b6682)), closes [#14236](https://github.com/vuejs/core/issues/14236)
+* **compiler-sfc:** use correct scope when resolving indexed access types from external files ([#14297](https://github.com/vuejs/core/issues/14297)) ([f0f0a21](https://github.com/vuejs/core/commit/f0f0a21dfaf0f41bb2198106db0f4ff32b97dcd3)), closes [#14292](https://github.com/vuejs/core/issues/14292)
+* **reactivity:** collection iteration should inherit iterator instance methods ([#12644](https://github.com/vuejs/core/issues/12644)) ([3c8b2fc](https://github.com/vuejs/core/commit/3c8b2fc836b2f60c90c2459933e66b2fd9fb8c08)), closes [#12615](https://github.com/vuejs/core/issues/12615)
+* **runtime-core:** skip patching reserved props for custom elements ([#14275](https://github.com/vuejs/core/issues/14275)) ([19cc7e2](https://github.com/vuejs/core/commit/19cc7e2cd053629f3233cd55dff98951e69f5391)), closes [#14274](https://github.com/vuejs/core/issues/14274)
+* **server-renderer:** use ssrRenderClass helper for className attribute ([#14327](https://github.com/vuejs/core/issues/14327)) ([a4708f3](https://github.com/vuejs/core/commit/a4708f324f62ac2122f87c4ee039deb2745f0905))
+* **ssr:** handle v-bind modifiers during render attrs ([#14263](https://github.com/vuejs/core/issues/14263)) ([c2f5964](https://github.com/vuejs/core/commit/c2f5964c47890321cab40fcf0ebc528e6d00337f)), closes [#14262](https://github.com/vuejs/core/issues/14262)
+
+
+
+## [3.5.26](https://github.com/vuejs/core/compare/v3.5.25...v3.5.26) (2025-12-18)
+
+
+### Bug Fixes
+
+* **compat:** fix compat handler of draggable ([#12445](https://github.com/vuejs/core/issues/12445)) ([ed85953](https://github.com/vuejs/core/commit/ed85953e28741ae1913cfc92b7b66e1a8da47f8c)), closes [#12444](https://github.com/vuejs/core/issues/12444)
+* **compat:** handle v-model deprecation warning with missing appContext ([#14203](https://github.com/vuejs/core/issues/14203)) ([945a543](https://github.com/vuejs/core/commit/945a543152e8d80903d4f7a18a84ebe8d36e56f8)), closes [#14202](https://github.com/vuejs/core/issues/14202)
+* **compiler-sfc:** demote const reactive bindings used in v-model ([#14214](https://github.com/vuejs/core/issues/14214)) ([e24ff7d](https://github.com/vuejs/core/commit/e24ff7d302a887ea532571c231a385362fa17279)), closes [#11265](https://github.com/vuejs/core/issues/11265) [#11275](https://github.com/vuejs/core/issues/11275)
+* **compiler-ssr:** handle ssr attr fallthrough when preserve whitespace ([#12304](https://github.com/vuejs/core/issues/12304)) ([4783118](https://github.com/vuejs/core/commit/47831189196b62b12dd17f6e909efc51d9d22fd2)), closes [#8072](https://github.com/vuejs/core/issues/8072)
+* **hmr:** handle cached text node update ([#14134](https://github.com/vuejs/core/issues/14134)) ([69ce3c7](https://github.com/vuejs/core/commit/69ce3c7d755db868cfa66d67ab5b3f383a44e053)), closes [#14127](https://github.com/vuejs/core/issues/14127)
+* **keep-alive:** use resolved component name for async components in cache pruning ([#14212](https://github.com/vuejs/core/issues/14212)) ([dfe667c](https://github.com/vuejs/core/commit/dfe667c8567d48167c250062483d2d2cfc7bdc03)), closes [#14210](https://github.com/vuejs/core/issues/14210)
+* **runtime-core:** ensure correct anchor el for deeper unresolved async components ([#14182](https://github.com/vuejs/core/issues/14182)) ([f5b3bf2](https://github.com/vuejs/core/commit/f5b3bf264d2e12725381bed1c492069437069b03)), closes [#14173](https://github.com/vuejs/core/issues/14173)
+* **runtime-core:** handle patch stable fragment edge case ([#12411](https://github.com/vuejs/core/issues/12411)) ([94aeb64](https://github.com/vuejs/core/commit/94aeb64ccdf20d541059b533c9780977c14db9cb)), closes [#12410](https://github.com/vuejs/core/issues/12410)
+* **runtime-core:** pass component instance to flushPreFlushCbs on unmount ([#14221](https://github.com/vuejs/core/issues/14221)) ([e857e12](https://github.com/vuejs/core/commit/e857e12c0aff03c0148e3e52d92935918872dc33)), closes [#14215](https://github.com/vuejs/core/issues/14215)
+
+
+### Performance Improvements
+
+* **compiler-core:** use binary-search to get line and column ([#14222](https://github.com/vuejs/core/issues/14222)) ([1904053](https://github.com/vuejs/core/commit/1904053f1f7986c2d6dbe858ee1b594b4b229c17))
+
+
+
+## [3.5.25](https://github.com/vuejs/core/compare/v3.5.24...v3.5.25) (2025-11-24)
+
+
+### Bug Fixes
+
+* **compiler:** share logic for comments and whitespace ([#13550](https://github.com/vuejs/core/issues/13550)) ([2214f7a](https://github.com/vuejs/core/commit/2214f7ab2940bcb751cd20130c020d895db6c042))
+* **provide:** warn when using `provide` after mounting ([#13954](https://github.com/vuejs/core/issues/13954)) ([247b2c2](https://github.com/vuejs/core/commit/247b2c2067afc4dee52f9f7bc194f3aab347ac55)), closes [#13921](https://github.com/vuejs/core/issues/13921) [#13924](https://github.com/vuejs/core/issues/13924)
+* **reactivity:** correctly wrap iterated array items to preserve their readonly status ([#14120](https://github.com/vuejs/core/issues/14120)) ([301020b](https://github.com/vuejs/core/commit/301020b481e85d03b0c96000f3221372063c41c6))
+* **reactivity:** toRef edge cases for ref unwrapping ([#12420](https://github.com/vuejs/core/issues/12420)) ([0d2357e](https://github.com/vuejs/core/commit/0d2357e6974678d5484751c869f429dc6ea85582))
+* **runtime-core:** keep options API typing intact when expose is used ([#14118](https://github.com/vuejs/core/issues/14118)) ([8f82f23](https://github.com/vuejs/core/commit/8f82f238463160284e504d1751d61b72dabb395e)), closes [#14117](https://github.com/vuejs/core/issues/14117) [vuejs/language-tools#5069](https://github.com/vuejs/language-tools/issues/5069)
+* **suspense:** defer clearing fallback vnode el in case it has dirs ([#14080](https://github.com/vuejs/core/issues/14080)) ([c0f63dd](https://github.com/vuejs/core/commit/c0f63ddbfa8fa221d66b683b5c26e471851c2b50)), closes [#14078](https://github.com/vuejs/core/issues/14078)
+
+
+
+## [3.5.24](https://github.com/vuejs/core/compare/v3.5.23...v3.5.24) (2025-11-07)
+
+
+### Reverts
+
+* Revert "fix(compiler-core): correctly handle ts type assertions in expression…" (#14062) ([11ec51a](https://github.com/vuejs/core/commit/11ec51aa5a7914745fee10ed2b9f9464fab4d02c)), closes [#14062](https://github.com/vuejs/core/issues/14062) [#14060](https://github.com/vuejs/core/issues/14060)
+
+
+
+## [3.5.23](https://github.com/vuejs/core/compare/v3.5.22...v3.5.23) (2025-11-06)
+
+
+### Bug Fixes
+
+* **compiler-core:** correctly handle ts type assertions in expressions ([#13397](https://github.com/vuejs/core/issues/13397)) ([e6544ac](https://github.com/vuejs/core/commit/e6544ac292b5b473274f87cdb83ebeac3e7e61a4)), closes [#13395](https://github.com/vuejs/core/issues/13395)
+* **compiler-core:** fix v-bind shorthand handling for in-DOM templates ([#13933](https://github.com/vuejs/core/issues/13933)) ([b3cca26](https://github.com/vuejs/core/commit/b3cca2611c656b85f0c4e737b9ec248d2627dded)), closes [#13930](https://github.com/vuejs/core/issues/13930)
+* **compiler-sfc:** resolve numeric literals and template literals without expressions as static property key ([#13998](https://github.com/vuejs/core/issues/13998)) ([75d44c7](https://github.com/vuejs/core/commit/75d44c718981f91843e197265cc68e82fe2532dd))
+* **compiler-ssr:** textarea with v-text directive SSR ([#13975](https://github.com/vuejs/core/issues/13975)) ([006a0c1](https://github.com/vuejs/core/commit/006a0c1011a224bcbf21195c6df76812c3a7e757))
+* **compiler:** using guard instead of non-nullish assertion ([#13982](https://github.com/vuejs/core/issues/13982)) ([dcc6f36](https://github.com/vuejs/core/commit/dcc6f362577ed86ccad31c2623c6cf75137dd27a))
+* **custom-element:** batch custom element prop patching ([#13478](https://github.com/vuejs/core/issues/13478)) ([c13e674](https://github.com/vuejs/core/commit/c13e674fb9f92ab9339d28a862d18de460faf56e)), closes [#12619](https://github.com/vuejs/core/issues/12619)
+* **custom-element:** optimize slot retrieval to avoid duplicates ([#13961](https://github.com/vuejs/core/issues/13961)) ([84ca349](https://github.com/vuejs/core/commit/84ca349fef73f6f55fc98299fcfa5c1eeef721db)), closes [#13955](https://github.com/vuejs/core/issues/13955)
+* **hydration:** avoid mismatch during hydrate text with newlines in interpolation ([#9232](https://github.com/vuejs/core/issues/9232)) ([6cbdf78](https://github.com/vuejs/core/commit/6cbdf7823b0c961190bee5b7c117b7f2bbeb832f)), closes [#9229](https://github.com/vuejs/core/issues/9229)
+* **runtime-core:** pass props and children to loadingComponent ([#13997](https://github.com/vuejs/core/issues/13997)) ([40c4b2a](https://github.com/vuejs/core/commit/40c4b2a876ce606973521dfc3024e26bfc10953a))
+* **runtime-dom:** ensure iframe sandbox is handled as an attribute to prevent unintended behavior ([#13950](https://github.com/vuejs/core/issues/13950)) ([5689884](https://github.com/vuejs/core/commit/5689884c8e32cda6a802ac36b4d23218f67b38ed)), closes [#13946](https://github.com/vuejs/core/issues/13946)
+* **suspense:** clear placeholder and fallback el after resolve to enable GC ([#13928](https://github.com/vuejs/core/issues/13928)) ([f411c66](https://github.com/vuejs/core/commit/f411c6604c12c531883aa0d30b81a7f69092f8a6))
+* **transition-group:** use offsetLeft and offsetTop instead of getBoundingClientRect  to avoid transform scale affect animation ([#6108](https://github.com/vuejs/core/issues/6108)) ([dc4dd59](https://github.com/vuejs/core/commit/dc4dd594fbecce6ed7f44ffa69dc8b5d022287b6)), closes [#6105](https://github.com/vuejs/core/issues/6105)
+* **v-model:** handle number modifier on change ([#13959](https://github.com/vuejs/core/issues/13959)) ([8fbe48f](https://github.com/vuejs/core/commit/8fbe48fe396d830999afd07f9413d899157d5f5e)), closes [#13958](https://github.com/vuejs/core/issues/13958)
+
+
+
+## [3.5.22](https://github.com/vuejs/core/compare/v3.5.21...v3.5.22) (2025-09-25)
+
+
+### Bug Fixes
+
+* **compiler-core:** identifiers in switch-case should not be inferred as references ([#13923](https://github.com/vuejs/core/issues/13923)) ([5953c9f](https://github.com/vuejs/core/commit/5953c9ff90090e128372f645d377bd99137a5fb4))
+* **compiler-dom:** nodes with v-once shouldn't be stringified ([#13878](https://github.com/vuejs/core/issues/13878)) ([95c1975](https://github.com/vuejs/core/commit/95c197560409f5d39a0d376c0a43d89a47a604e8))
+* **compiler-sfc:** add support for `@vue-ignore` in runtime type resolution ([#13906](https://github.com/vuejs/core/issues/13906)) ([ba7f7f9](https://github.com/vuejs/core/commit/ba7f7f90f689f6e7e0417a192d081db542de28ec))
+* **compiler-sfc:** enhance inferRuntimeType to support TSMappedType with indexed access ([#13848](https://github.com/vuejs/core/issues/13848)) ([e388f1a](https://github.com/vuejs/core/commit/e388f1a09fde78cf006450f060813d972ac8c23d)), closes [#13847](https://github.com/vuejs/core/issues/13847)
+* **compiler-sfc:** ensure css custom properties do not start with a digit ([#13870](https://github.com/vuejs/core/issues/13870)) ([9c27951](https://github.com/vuejs/core/commit/9c279517b9bc1f4c250c555ec9b9eb6104756d56))
+* **compiler-sfc:** ensure props bindings register before compiling template ([#13922](https://github.com/vuejs/core/issues/13922)) ([abd5638](https://github.com/vuejs/core/commit/abd563822abafe63047f7b599bff266380ee2b64)), closes [#13920](https://github.com/vuejs/core/issues/13920)
+* **compiler-ssr:** ensure v-show has a higher priority in SSR ([#12171](https://github.com/vuejs/core/issues/12171)) ([836b829](https://github.com/vuejs/core/commit/836b82976ffb7aa0ea9cbe417bef07deae3ca47c)), closes [#12162](https://github.com/vuejs/core/issues/12162)
+* **custom-element:** properly mount multiple Teleports in custom element component w/ shadowRoot false ([#13900](https://github.com/vuejs/core/issues/13900)) ([5e1e791](https://github.com/vuejs/core/commit/5e1e791880238380a1038ae2c505e206ceb34d77)), closes [#13899](https://github.com/vuejs/core/issues/13899)
+* **custom-element:** set prop runs pending mutations before disconnect ([#13897](https://github.com/vuejs/core/issues/13897)) ([c4a88cd](https://github.com/vuejs/core/commit/c4a88cdd0dfed3ef46a8aa9be448c01781fdc4f0)), closes [#13315](https://github.com/vuejs/core/issues/13315)
+* **custom-element:** use `PatchFlags.BAIL` for slot when props are present ([#13907](https://github.com/vuejs/core/issues/13907)) ([5358bca](https://github.com/vuejs/core/commit/5358bca4a80cf52d19ed91967eeaa025a786083d)), closes [#13904](https://github.com/vuejs/core/issues/13904)
+* **reactivity:** respect readonly during ref unwrapping ([#13905](https://github.com/vuejs/core/issues/13905)) ([aba7fed](https://github.com/vuejs/core/commit/aba7feda1703e69e5a7c37f784718de0371adadc)), closes [#13903](https://github.com/vuejs/core/issues/13903)
+* **reactivity:** update iterator to check for completion instead of value presence ([#13761](https://github.com/vuejs/core/issues/13761)) ([2078f8b](https://github.com/vuejs/core/commit/2078f8b7565cf637f47fcd5b0abdfb2b264225bb))
+* **runtime-core:** simplify block-tracking disabling in `h` helper ([#13841](https://github.com/vuejs/core/issues/13841)) ([75220c7](https://github.com/vuejs/core/commit/75220c7995a13a483ae9599a739075be1c8e17f8))
+* **transition-group:** run `forceReflow` on the correct document (fix [#13849](https://github.com/vuejs/core/issues/13849)) ([#13853](https://github.com/vuejs/core/issues/13853)) ([1be5ddf](https://github.com/vuejs/core/commit/1be5ddfe878c8bfddaa2c50e82105b247f50b9ba))
+* **types:** more precise types for Events and added missing definitions ([#9675](https://github.com/vuejs/core/issues/9675)) ([8bb8fb2](https://github.com/vuejs/core/commit/8bb8fb236257c03bfa0bccadcfffe3eb4592f71b))
+* **types:** set dom stub type to `never` instead of `{}` ([#13915](https://github.com/vuejs/core/issues/13915)) ([8620a61](https://github.com/vuejs/core/commit/8620a616eb02a64fe32dd52d9be68e360687ef9d)), closes [#11564](https://github.com/vuejs/core/issues/11564)
+* **types:** widen directive arg type from string to any ([#13758](https://github.com/vuejs/core/issues/13758)) ([4b71706](https://github.com/vuejs/core/commit/4b7170625d0bc93b26a3343aeda98850c1138f82)), closes [#13757](https://github.com/vuejs/core/issues/13757)
+
+
+### Features
+
+* **custom-element:** allow specifying additional options for `shadowRoot` in custom elements ([#12965](https://github.com/vuejs/core/issues/12965)) ([47e628d](https://github.com/vuejs/core/commit/47e628df1ce1914c5677010ad5bddd18d037cb3c)), closes [#12964](https://github.com/vuejs/core/issues/12964)
+
+
+### Reverts
+
+* Revert "fix(hmr): prevent __VUE_HMR_RUNTIME__ from being overwritten by vue runtime in 3rd-party libraries" (#13925) ([6b68f72](https://github.com/vuejs/core/commit/6b68f72673dac5db349f26eeefb2f2e0e342586b)), closes [#13925](https://github.com/vuejs/core/issues/13925)
+
+
+
+## [3.5.21](https://github.com/vuejs/core/compare/v3.5.20...v3.5.21) (2025-09-02)
+
+
+### Bug Fixes
+
+* **compiler-core:** force dynamic slots when slot referencing scope vars ([#9427](https://github.com/vuejs/core/issues/9427)) ([99d54b2](https://github.com/vuejs/core/commit/99d54b28b46dbea006205dff71c383a31dd1b87a)), closes [#9380](https://github.com/vuejs/core/issues/9380)
+* **compiler-sfc:** check lang before attempt to compile script ([#13508](https://github.com/vuejs/core/issues/13508)) ([55922ff](https://github.com/vuejs/core/commit/55922ff3168a1397ad72f18946eb1c4051cdab3b)), closes [#8368](https://github.com/vuejs/core/issues/8368)
+* **compiler-sfc:** support `${configDir}` in paths for TypeScript 5.5+ ([#13491](https://github.com/vuejs/core/issues/13491)) ([8696e34](https://github.com/vuejs/core/commit/8696e346b4780d88247464490f1a992cc0c3658c)), closes [#13484](https://github.com/vuejs/core/issues/13484)
+* **compiler-sfc:** support global augments with named exports ([#13789](https://github.com/vuejs/core/issues/13789)) ([35da3c6](https://github.com/vuejs/core/commit/35da3c6dcb30030ef60fa22e30aa83a56e396c60))
+* **custom-element:** prevent defineCustomElement from mutating the options object ([#13791](https://github.com/vuejs/core/issues/13791)) ([e322436](https://github.com/vuejs/core/commit/e322436887549c129e61eb58a0084167103451bb))
+* **hmr:** prevent `__VUE_HMR_RUNTIME__` from being overwritten by vue runtime in 3rd-party libraries ([#13817](https://github.com/vuejs/core/issues/13817)) ([1392734](https://github.com/vuejs/core/commit/1392734ae5d5a3b2be124753e198eafa324f6815)), closes [vitejs/vite-plugin-vue#644](https://github.com/vitejs/vite-plugin-vue/issues/644)
+* **hmr:** prevent update unmounting component during HMR reload ([#13815](https://github.com/vuejs/core/issues/13815)) ([ef20b86](https://github.com/vuejs/core/commit/ef20b86b36a127e317f8981df970dc8efd277053)), closes [vitejs/vite-plugin-vue#599](https://github.com/vitejs/vite-plugin-vue/issues/599)
+* **runtime-core:** disable tracking block in h function ([#8213](https://github.com/vuejs/core/issues/8213)) ([8f6b505](https://github.com/vuejs/core/commit/8f6b5050518441a5047d128138da44f798836002)), closes [#6913](https://github.com/vuejs/core/issues/6913)
+* **runtime-core:** use separate emits caches for components and mixins ([#11661](https://github.com/vuejs/core/issues/11661)) ([15fc75f](https://github.com/vuejs/core/commit/15fc75f4031dea805c3bbb67a75e48a9dc307c11))
+* **Suspence:** handle Suspense + KeepAlive HMR updating edge case ([#13076](https://github.com/vuejs/core/issues/13076)) ([5d75a17](https://github.com/vuejs/core/commit/5d75a170c8d23acd11ef2513173d4cbc4d0b54de)), closes [#13075](https://github.com/vuejs/core/issues/13075)
+* **Teleport:** hydrate disabled Teleport with undefined target ([#11235](https://github.com/vuejs/core/issues/11235)) ([00978f7](https://github.com/vuejs/core/commit/00978f7d14e85b49d9d334ea92fa8c03733ce64c)), closes [#11230](https://github.com/vuejs/core/issues/11230)
+* **templateRef:** prevent unnecessary set ref on dynamic ref change or component unmount ([#12642](https://github.com/vuejs/core/issues/12642)) ([93ba107](https://github.com/vuejs/core/commit/93ba10767230872fcdca974a1e19e8bd69b7eb6a)), closes [#12639](https://github.com/vuejs/core/issues/12639)
+* **watch:** use maximum depth for duplicates ([#13434](https://github.com/vuejs/core/issues/13434)) ([f2699a5](https://github.com/vuejs/core/commit/f2699a5cb376ffa452a54feb171c14411c67287c))
+
+
+### Performance Improvements
+
+* improve regexp performance with non-capturing groups ([#13567](https://github.com/vuejs/core/issues/13567)) ([1e8b65a](https://github.com/vuejs/core/commit/1e8b65aa4934c94ef6142b4f49cdfb13ba5e6ce5))
+
+
+
 ## [3.5.20](https://github.com/vuejs/core/compare/v3.5.19...v3.5.20) (2025-08-25)
 
 
@@ -288,7 +762,7 @@
 ### Bug Fixes
 
 * **compile-dom:** should be able to stringify mathML ([#11891](https://github.com/vuejs/core/issues/11891)) ([85c138c](https://github.com/vuejs/core/commit/85c138ced108268f7656b568dfd3036a1e0aae34))
-* **compiler-sfc:** preserve old behavior when using withDefaults with desutructure ([8492c3c](https://github.com/vuejs/core/commit/8492c3c49a922363d6c77ef192c133a8fbce6514)), closes [#11930](https://github.com/vuejs/core/issues/11930)
+* **compiler-sfc:** preserve old behavior when using withDefaults with destructure ([8492c3c](https://github.com/vuejs/core/commit/8492c3c49a922363d6c77ef192c133a8fbce6514)), closes [#11930](https://github.com/vuejs/core/issues/11930)
 * **reactivity:** avoid exponential perf cost and reduce call stack depth for deeply chained computeds ([#11944](https://github.com/vuejs/core/issues/11944)) ([c74bb8c](https://github.com/vuejs/core/commit/c74bb8c2dd9e82aaabb0a2a2b368e900929b513b)), closes [#11928](https://github.com/vuejs/core/issues/11928)
 * **reactivity:** rely on dirty check only when computed has deps ([#11931](https://github.com/vuejs/core/issues/11931)) ([aa5dafd](https://github.com/vuejs/core/commit/aa5dafd2b55d42d6a29316a3bc91aea85c676a0b)), closes [#11929](https://github.com/vuejs/core/issues/11929)
 * **watch:** `once` option should be ignored by watchEffect ([#11884](https://github.com/vuejs/core/issues/11884)) ([49fa673](https://github.com/vuejs/core/commit/49fa673493d93b77ddba2165ab6545bae84fd1ae))
@@ -303,7 +777,7 @@
 
 * **compiler-core:** fix handling of delimiterOpen in VPre ([#11915](https://github.com/vuejs/core/issues/11915)) ([706d4ac](https://github.com/vuejs/core/commit/706d4ac1d0210b2d9134b3228280187fe02fc971)), closes [#11913](https://github.com/vuejs/core/issues/11913)
 * **compiler-dom:** fix stringify static edge for partially eligible chunks in cached parent ([1d99d61](https://github.com/vuejs/core/commit/1d99d61c1bd77f9ea6743f6214a82add8346a121)), closes [#11879](https://github.com/vuejs/core/issues/11879) [#11890](https://github.com/vuejs/core/issues/11890)
-* **compiler-dom:** should ignore leading newline in <textarea> per spec ([3c4bf76](https://github.com/vuejs/core/commit/3c4bf7627649ec1e3220f8c4e4163c20d2afb367))
+* **compiler-dom:** should ignore leading newline in `<textarea>` per spec ([3c4bf76](https://github.com/vuejs/core/commit/3c4bf7627649ec1e3220f8c4e4163c20d2afb367))
 * **compiler-sfc:** nested css supports atrule and comment ([#11899](https://github.com/vuejs/core/issues/11899)) ([0e7bc71](https://github.com/vuejs/core/commit/0e7bc717e6640644f062957ec5031506f0dab215)), closes [#11896](https://github.com/vuejs/core/issues/11896)
 * **custom-element:** handle nested customElement mount w/ shadowRoot false ([#11861](https://github.com/vuejs/core/issues/11861)) ([f2d8019](https://github.com/vuejs/core/commit/f2d801918841e7673ff3f048d0d895592a2f7e23)), closes [#11851](https://github.com/vuejs/core/issues/11851) [#11871](https://github.com/vuejs/core/issues/11871)
 * **hmr:** reload async child wrapped in Suspense + KeepAlive ([#11907](https://github.com/vuejs/core/issues/11907)) ([10a2c60](https://github.com/vuejs/core/commit/10a2c6053bd30d160d0214bb3566f540187e6874)), closes [#11868](https://github.com/vuejs/core/issues/11868)
@@ -589,7 +1063,7 @@
 
 * **build:** enable SSR branches in esm-browser builds ([b14cd9a](https://github.com/vuejs/core/commit/b14cd9a68bab082332b0169be075be357be076ca))
 * **compiler-core:** change node hoisting to caching per instance ([#11067](https://github.com/vuejs/core/issues/11067)) ([cd0ea0d](https://github.com/vuejs/core/commit/cd0ea0d479a276583fa181d8ecbc97fb0e4a9dce)), closes [#5256](https://github.com/vuejs/core/issues/5256) [#9219](https://github.com/vuejs/core/issues/9219) [#10959](https://github.com/vuejs/core/issues/10959)
-* **compiler-sfc:** should properly walk desutructured props when reactive destructure is not enabled ([0fd6193](https://github.com/vuejs/core/commit/0fd6193def2380916eb51a118f37f2d9ec2ace23)), closes [#11325](https://github.com/vuejs/core/issues/11325)
+* **compiler-sfc:** should properly walk destructured props when reactive destructure is not enabled ([0fd6193](https://github.com/vuejs/core/commit/0fd6193def2380916eb51a118f37f2d9ec2ace23)), closes [#11325](https://github.com/vuejs/core/issues/11325)
 * **types:** respect props with default on instance type when using __typeProps ([96e4738](https://github.com/vuejs/core/commit/96e473833422342c5ca371ae1aeb186dec9a55e3))
 
 

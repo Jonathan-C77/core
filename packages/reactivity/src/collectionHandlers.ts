@@ -55,22 +55,22 @@ function createIterableMethod(
       )
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
-    return {
-      // iterator protocol
-      next() {
-        const { value, done } = innerIterator.next()
-        return done
-          ? { value, done }
-          : {
-              value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
-              done,
-            }
+    return extend(
+      // inheriting all iterator properties
+      Object.create(innerIterator),
+      {
+        // iterator protocol
+        next() {
+          const { value, done } = innerIterator.next()
+          return done
+            ? { value, done }
+            : {
+                value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
+                done,
+              }
+        },
       },
-      // iterable protocol
-      [Symbol.iterator]() {
-        return this
-      },
-    }
+    )
   }
 }
 
@@ -167,15 +167,22 @@ function createInstrumentations(
         }
       : {
           add(this: SetTypes, value: unknown) {
-            if (!shallow && !isShallow(value) && !isReadonly(value)) {
-              value = toRaw(value)
-            }
             const target = toRaw(this)
             const proto = getProto(target)
-            const hadKey = proto.has.call(target, value)
+            const rawValue = toRaw(value)
+            const valueToAdd =
+              !shallow && !isShallow(value) && !isReadonly(value)
+                ? rawValue
+                : value
+            const hadKey =
+              proto.has.call(target, valueToAdd) ||
+              (hasChanged(value, valueToAdd) &&
+                proto.has.call(target, value)) ||
+              (hasChanged(rawValue, valueToAdd) &&
+                proto.has.call(target, rawValue))
             if (!hadKey) {
-              target.add(value)
-              trigger(target, TriggerOpTypes.ADD, value, value)
+              target.add(valueToAdd)
+              trigger(target, TriggerOpTypes.ADD, valueToAdd, valueToAdd)
             }
             return this
           },
@@ -272,6 +279,8 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
+    } else if (key === ReactiveFlags.IS_SHALLOW) {
+      return shallow
     } else if (key === ReactiveFlags.RAW) {
       return target
     }

@@ -37,6 +37,27 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttribute('readonly')).toBe(null)
   })
 
+  test('playsinline boolean attribute', () => {
+    const el = document.createElement('video')
+    patchProp(el, 'playsinline', null, true)
+    expect(el.getAttribute('playsinline')).toBe('')
+    patchProp(el, 'playsinline', true, false)
+    expect(el.getAttribute('playsinline')).toBe(null)
+    patchProp(el, 'playsinline', false, '')
+    expect(el.getAttribute('playsinline')).toBe('')
+  })
+
+  test.each(['disablepictureinpicture', 'disableremoteplayback'])(
+    '%s boolean attribute',
+    key => {
+      const el = document.createElement('video')
+      patchProp(el, key, null, true)
+      expect(el.getAttribute(key)).toBe('')
+      patchProp(el, key, true, false)
+      expect(el.getAttribute(key)).toBe(null)
+    },
+  )
+
   test('attributes', () => {
     const el = document.createElement('div')
     patchProp(el, 'foo', null, 'a')
@@ -87,5 +108,39 @@ describe('runtime-dom: attrs patching', () => {
     patchProp(el2, 'data-test', null, obj)
     expect(el2.dataset.test).toBe(undefined)
     expect(testvalue).toBe(obj)
+  })
+
+  // #13946
+  test('sandbox should be handled as attribute even if property exists', () => {
+    const iframe = document.createElement('iframe') as any
+    let propSetCount = 0
+    // simulate sandbox property in jsdom environment
+    Object.defineProperty(iframe, 'sandbox', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return this._sandbox
+      },
+      set(v) {
+        propSetCount++
+        this._sandbox = v
+      },
+    })
+
+    patchProp(iframe, 'sandbox', null, 'allow-scripts')
+    expect(iframe.getAttribute('sandbox')).toBe('allow-scripts')
+    expect(propSetCount).toBe(0)
+
+    patchProp(iframe, 'sandbox', 'allow-scripts', null)
+    expect(iframe.hasAttribute('sandbox')).toBe(false)
+    expect(iframe.getAttribute('sandbox')).toBe(null)
+    expect(propSetCount).toBe(0)
+
+    patchProp(iframe, 'sandbox', null, '')
+    expect(iframe.getAttribute('sandbox')).toBe('')
+    expect(iframe.hasAttribute('sandbox')).toBe(true)
+    expect(propSetCount).toBe(0)
+
+    delete iframe.sandbox
   })
 })

@@ -221,8 +221,11 @@ export function watch(
   if (once && cb) {
     const _cb = cb
     cb = (...args) => {
-      _cb(...args)
-      watchHandle()
+      try {
+        return _cb(...args)
+      } finally {
+        watchHandle()
+      }
     }
   }
 
@@ -241,19 +244,21 @@ export function watch(
       // watch(source, cb)
       const newValue = effect.run()
       if (
+        immediateFirstRun ||
         deep ||
         forceTrigger ||
         (isMultiSource
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue))
       ) {
-        // cleanup before running cb again
-        if (cleanup) {
-          cleanup()
-        }
         const currentWatcher = activeWatcher
-        activeWatcher = effect
+        pauseTracking()
         try {
+          // cleanup before running cb again
+          if (cleanup) {
+            cleanup()
+          }
+          activeWatcher = effect
           const args = [
             newValue,
             // pass undefined as the old value when it's changed for the first time
@@ -271,6 +276,7 @@ export function watch(
               cb!(...args)
         } finally {
           activeWatcher = currentWatcher
+          resetTracking()
         }
       }
     } else {
@@ -331,17 +337,17 @@ export function watch(
 export function traverse(
   value: unknown,
   depth: number = Infinity,
-  seen?: Set<unknown>,
+  seen?: Map<unknown, number>,
 ): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
 
-  seen = seen || new Set()
-  if (seen.has(value)) {
+  seen = seen || new Map()
+  if ((seen.get(value) || 0) >= depth) {
     return value
   }
-  seen.add(value)
+  seen.set(value, depth)
   depth--
   if (isRef(value)) {
     traverse(value.value, depth, seen)

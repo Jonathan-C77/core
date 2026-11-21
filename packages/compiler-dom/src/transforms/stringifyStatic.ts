@@ -17,10 +17,12 @@ import {
   type TextCallNode,
   type TransformContext,
   createCallExpression,
+  findDir,
   isStaticArgOf,
 } from '@vue/compiler-core'
 import {
   escapeHtml,
+  includeBooleanAttr,
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -148,7 +150,7 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
     const isCached = isParentCached || getCachedNode(child)
     if (isCached) {
       // presence of cached means child must be a stringifiable node
-      const result = analyzeNode(child as StringifiableNode)
+      const result = analyzeNode(child as StringifiableNode, context)
       if (result) {
         // node is stringifiable, record state
         nc += result[0]
@@ -184,7 +186,7 @@ const getCachedNode = (
   }
 }
 
-const dataAriaRE = /^(data|aria)-/
+const dataAriaRE = /^(?:data|aria)-/
 const isStringifiableAttr = (name: string, ns: Namespaces) => {
   return (
     (ns === Namespaces.HTML
@@ -208,8 +210,16 @@ const isNonStringifiable = /*@__PURE__*/ makeMap(
  *   - nc is the number of nodes inside
  *   - ec is the number of element with bindings inside
  */
-function analyzeNode(node: StringifiableNode): [number, number] | false {
+function analyzeNode(
+  node: StringifiableNode,
+  context: TransformContext,
+): [number, number] | false {
   if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
+    return false
+  }
+
+  // v-once nodes should not be stringified
+  if (node.type === NodeTypes.ELEMENT && findDir(node, 'once', true)) {
     return false
   }
 
@@ -253,6 +263,15 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           p.exp &&
           (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
             p.exp.constType < ConstantTypes.CAN_STRINGIFY)
+        ) {
+          return bail()
+        }
+        // Custom elements may route these bindings to DOM properties at runtime.
+        if (
+          p.arg &&
+          p.arg.isStatic &&
+          (isBooleanAttr(p.arg.content) || p.arg.content === 'hidden') &&
+          context.isCustomElement(node.tag)
         ) {
           return bail()
         }
@@ -320,7 +339,7 @@ function stringifyElement(
   context: TransformContext,
 ): string {
   let res = `<${node.tag}`
-  let innerHTML = ''
+  let innerHTML = undefined
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
@@ -339,17 +358,16 @@ function stringifyElement(
           }="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"`
           continue
         }
-        // #6568
-        if (
-          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
-          exp.content === 'false'
-        ) {
-          continue
-        }
         // constant v-bind, e.g. :foo="1"
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
-          const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          const arg = (p.arg as SimpleExpressionNode).content
+          if (
+            (isBooleanAttr(arg) || arg === 'hidden') &&
+            !includeBooleanAttr(evaluated)
+          ) {
+            continue
+          }
           if (arg === 'class') {
             evaluated = normalizeClass(evaluated)
           } else if (arg === 'style') {
@@ -362,7 +380,7 @@ function stringifyElement(
       } else if (p.name === 'html') {
         // #5439 v-html with constant value
         // not sure why would anyone do this but it can happen
-        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode)
+        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode) ?? ''
       } else if (p.name === 'text') {
         innerHTML = escapeHtml(
           toDisplayString(evaluateConstant(p.exp as SimpleExpressionNode)),
@@ -374,7 +392,7 @@ function stringifyElement(
     res += ` ${context.scopeId}`
   }
   res += `>`
-  if (innerHTML) {
+  if (innerHTML !== undefined) {
     res += innerHTML
   } else {
     for (let i = 0; i < node.children.length; i++) {

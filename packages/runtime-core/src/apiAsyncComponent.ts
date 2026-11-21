@@ -12,7 +12,7 @@ import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
 import { warn } from './warning'
-import { ref } from '@vue/reactivity'
+import { onScopeDispose, ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { markAsyncBoundary } from './helpers/useId'
@@ -43,7 +43,7 @@ export interface AsyncComponentOptions<T = any> {
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
@@ -122,6 +122,7 @@ export function defineAsyncComponent<
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
+      const wasConnected = el.isConnected
       let patched = false
       ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
       const performHydrate = () => {
@@ -135,6 +136,7 @@ export function defineAsyncComponent<
           }
           return
         }
+        if (!el.parentNode || (wasConnected && !el.isConnected)) return
         hydrate()
       }
       const doHydrate = hydrateStrategy
@@ -174,6 +176,7 @@ export function defineAsyncComponent<
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
           !errorComponent /* do not throw in dev if user provided error component */,
+          true,
         )
       }
 
@@ -201,14 +204,26 @@ export function defineAsyncComponent<
       const error = ref()
       const delayed = ref(!!delay)
 
+      let timeoutTimer: ReturnType<typeof setTimeout> | undefined
+      let delayTimer: ReturnType<typeof setTimeout> | undefined
+
+      // a setup resource: released with the scope, which a discarded
+      // suspense branch stops without running the unmount hooks
+      onScopeDispose(() => {
+        if (timeoutTimer != null) clearTimeout(timeoutTimer)
+        if (delayTimer != null) clearTimeout(delayTimer)
+      })
+
       if (delay) {
-        setTimeout(() => {
+        delayTimer = setTimeout(() => {
+          if (instance.isUnmounted) return
           delayed.value = false
         }, delay)
       }
 
       if (timeout != null) {
-        setTimeout(() => {
+        timeoutTimer = setTimeout(() => {
+          if (instance.isUnmounted) return
           if (!loaded.value && !error.value) {
             const err = new Error(
               `Async component timed out after ${timeout}ms.`,
@@ -221,6 +236,7 @@ export function defineAsyncComponent<
 
       load()
         .then(() => {
+          if (instance.isUnmounted) return
           loaded.value = true
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
@@ -229,6 +245,10 @@ export function defineAsyncComponent<
           }
         })
         .catch(err => {
+          if (instance.isUnmounted) {
+            pendingRequest = null
+            return
+          }
           onError(err)
           error.value = err
         })
@@ -241,7 +261,10 @@ export function defineAsyncComponent<
             error: error.value,
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent)
+          return createInnerComp(
+            loadingComponent as ConcreteComponent,
+            instance,
+          )
         }
       }
     },

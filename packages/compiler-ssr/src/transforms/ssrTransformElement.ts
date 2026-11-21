@@ -9,6 +9,7 @@ import {
   type InterpolationNode,
   type JSChildNode,
   MERGE_PROPS,
+  Namespaces,
   type NodeTransform,
   NodeTypes,
   type PlainElementNode,
@@ -29,9 +30,11 @@ import {
   createSimpleExpression,
   createTemplateLiteral,
   findDir,
+  findProp,
   hasDynamicKeyVBind,
   isStaticArgOf,
   isStaticExp,
+  transformStyle,
 } from '@vue/compiler-dom'
 import {
   NO,
@@ -39,7 +42,9 @@ import {
   isBooleanAttr,
   isBuiltInDirective,
   isSSRSafeAttrName,
+  parseStringStyle,
   propsToAttrMap,
+  stringifyStyle,
 } from '@vue/shared'
 import { SSRErrorCodes, createSSRCompilerError } from '../errors'
 import {
@@ -65,6 +70,25 @@ const rawChildrenMap = new WeakMap<
   TemplateLiteral['elements'][0]
 >()
 
+// These DOM properties reflect attributes only on specific HTML elements.
+const tagSpecificDOMProps: Record<string, string | undefined> = {
+  form: 'acceptCharset',
+  label: 'htmlFor',
+  output: 'htmlFor',
+  script: 'htmlFor',
+  meta: 'httpEquiv',
+}
+
+// static styles on plain elements are rendered by ssrTransformElement
+export const ssrTransformStyle: NodeTransform = (node, context) => {
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType !== ElementTypes.ELEMENT
+  ) {
+    transformStyle(node, context)
+  }
+}
+
 export const ssrTransformElement: NodeTransform = (node, context) => {
   if (
     node.type !== NodeTypes.ELEMENT ||
@@ -88,8 +112,20 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     const hasCustomDir = node.props.some(
       p => p.type === NodeTypes.DIRECTIVE && !isBuiltInDirective(p.name),
     )
+
+    // v-show has a higher priority in ssr
+    const vShowPropIndex = node.props.findIndex(
+      i => i.type === NodeTypes.DIRECTIVE && i.name === 'show',
+    )
+    if (vShowPropIndex !== -1) {
+      const vShowProp = node.props[vShowPropIndex]
+      node.props.splice(vShowPropIndex, 1)
+      node.props.push(vShowProp)
+    }
+
     const needMergeProps = hasDynamicVBind || hasCustomDir
     if (needMergeProps) {
+      transformStyle(node, context)
       const { props, directives } = buildProps(
         node,
         context,
@@ -107,12 +143,15 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
 
         if (node.tag === 'textarea') {
           const existingText = node.children[0] as
-            | TextNode
-            | InterpolationNode
-            | undefined
+            TextNode | InterpolationNode | undefined
           // If interpolation, this is dynamic <textarea> content, potentially
-          // injected by v-model and takes higher priority than v-bind value
-          if (!existingText || existingText.type !== NodeTypes.INTERPOLATION) {
+          // injected by v-model and takes higher priority than v-bind value.
+          // Additionally, directives with content overrides (v-text/v-html)
+          // have higher priority than the merged props.
+          if (
+            !hasContentOverrideDirective(node) &&
+            (!existingText || existingText.type !== NodeTypes.INTERPOLATION)
+          ) {
             // <textarea> with dynamic v-bind. We don't know if the final props
             // will contain .value, so we will have to do something special:
             // assign the merged props to a temp variable, and check whether
@@ -165,9 +204,8 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             ]
           }
         } else if (directives.length && !node.children.length) {
-          // v-text directive has higher priority than the merged props
-          const vText = findDir(node, 'text')
-          if (!vText) {
+          // v-text/v-html have higher priority than the merged props
+          if (!hasContentOverrideDirective(node)) {
             const tempId = `_temp${context.temps++}`
             propsExp.arguments = [
               createAssignmentExpression(
@@ -200,9 +238,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     // book keeping static/dynamic class merging.
     let dynamicClassBinding: CallExpression | undefined = undefined
     let staticClassBinding: string | undefined = undefined
-    // all style bindings are converted to dynamic by transformStyle.
-    // but we need to make sure to merge them.
     let dynamicStyleBinding: CallExpression | undefined = undefined
+    let staticStyleBinding: string | undefined = undefined
+    let staticStyleIndex = -1
 
     for (let i = 0; i < node.props.length; i++) {
       const prop = node.props[i]
@@ -261,14 +299,20 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                     // already has style binding, merge into it.
                     mergeCall(dynamicStyleBinding, value)
                   } else {
-                    openTag.push(
-                      ` style="`,
-                      (dynamicStyleBinding = createCallExpression(
-                        context.helper(SSR_RENDER_STYLE),
-                        [value],
-                      )),
-                      `"`,
+                    dynamicStyleBinding = createCallExpression(
+                      context.helper(SSR_RENDER_STYLE),
+                      [
+                        staticStyleBinding
+                          ? createArrayExpression([staticStyleBinding, value])
+                          : value,
+                      ],
                     )
+                    const parts = [` style="`, dynamicStyleBinding, `"`]
+                    if (staticStyleBinding) {
+                      openTag.splice(staticStyleIndex, 1, ...parts)
+                    } else {
+                      openTag.push(...parts)
+                    }
                   }
                 } else {
                   attrName =
@@ -285,6 +329,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                         createSimpleExpression(' ' + attrName, true),
                         createSimpleExpression('', true),
                         false /* no newline */,
+                      ),
+                    )
+                  } else if (attrName === 'hidden') {
+                    openTag.push(
+                      createCallExpression(
+                        context.helper(SSR_RENDER_DYNAMIC_ATTR),
+                        [key, value],
                       ),
                     )
                   } else if (isSSRSafeAttrName(attrName)) {
@@ -323,7 +374,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         }
       } else {
         // special case: value on <textarea>
-        const name = prop.name
+        let name = prop.name
         if (node.tag === 'textarea' && name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
         } else if (!needMergeProps) {
@@ -334,8 +385,32 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           if (name === 'class' && prop.value) {
             staticClassBinding = JSON.stringify(prop.value.content)
           }
+          if (name === 'style' && prop.value) {
+            const style = parseStringStyle(prop.value.content)
+            if (dynamicStyleBinding) {
+              mergeCall(dynamicStyleBinding, JSON.stringify(style))
+            } else {
+              staticStyleBinding = JSON.stringify(style)
+              staticStyleIndex = openTag.length
+              openTag.push(` style="${escapeHtml(stringifyStyle(style))}"`)
+            }
+            continue
+          }
+          const mappedName = propsToAttrMap[name]
+          if (
+            mappedName &&
+            (name === 'className'
+              ? node.ns !== Namespaces.SVG
+              : node.ns === Namespaces.HTML &&
+                tagSpecificDOMProps[node.tag] === name) &&
+            !context.isCustomElement(node.tag) &&
+            // HTML parsers keep the first occurrence of a repeated attribute.
+            !findProp(node, mappedName, false, true)
+          ) {
+            name = mappedName
+          }
           openTag.push(
-            ` ${prop.name}` +
+            ` ${name}` +
               (prop.value ? `="${escapeHtml(prop.value.content)}"` : ``),
           )
         }
@@ -436,6 +511,10 @@ function findVModel(node: PlainElementNode): DirectiveNode | undefined {
   return node.props.find(
     p => p.type === NodeTypes.DIRECTIVE && p.name === 'model' && p.exp,
   ) as DirectiveNode | undefined
+}
+
+function hasContentOverrideDirective(node: PlainElementNode): boolean {
+  return !!findDir(node, 'text') || !!findDir(node, 'html')
 }
 
 export function ssrProcessElement(

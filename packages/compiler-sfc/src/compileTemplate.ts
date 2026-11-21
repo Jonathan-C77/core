@@ -1,14 +1,11 @@
-import {
-  type CodegenResult,
-  type CompilerError,
-  type CompilerOptions,
-  type ElementNode,
-  type NodeTransform,
-  NodeTypes,
-  type ParserOptions,
-  type RawSourceMap,
-  type RootNode,
-  createRoot,
+import type {
+  CodegenResult,
+  CompilerError,
+  CompilerOptions,
+  NodeTransform,
+  ParserOptions,
+  RawSourceMap,
+  RootNode,
 } from '@vue/compiler-core'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import {
@@ -28,6 +25,7 @@ import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
 import { genCssVarsFromList } from './style/cssVars'
+import { resolveTemplateAST } from './template/resolveTemplateAST'
 
 export interface TemplateCompiler {
   compile(source: string | RootNode, options: CompilerOptions): CodegenResult
@@ -176,6 +174,10 @@ function doCompileTemplate({
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
   const warnings: CompilerError[] = []
+  const onError = (e: CompilerError) => {
+    errors.push(e)
+    compilerOptions.onError?.(e)
+  }
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
@@ -211,21 +213,12 @@ function doCompileTemplate({
     inAST = undefined
   }
 
-  if (inAST?.transformed) {
-    // If input AST has already been transformed, then it cannot be reused.
-    // We need to parse a fresh one. Can't just use `source` here since we need
-    // the AST location info to be relative to the entire SFC.
-    const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
-      prefixIdentifiers: true,
-      ...compilerOptions,
-      parseMode: 'sfc',
-      onError: e => errors.push(e),
-    })
-    const template = newAST.children.find(
-      node => node.type === NodeTypes.ELEMENT && node.tag === 'template',
-    ) as ElementNode
-    inAST = createRoot(template.children, inAST.source)
-  }
+  inAST = resolveTemplateAST(inAST, {
+    compiler,
+    compilerOptions,
+    ssr,
+    onError,
+  })
 
   let { code, ast, preamble, map } = compiler.compile(inAST || source, {
     mode: 'module',
@@ -243,8 +236,11 @@ function doCompileTemplate({
     hmr: !isProd,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
-    onError: e => errors.push(e),
-    onWarn: w => warnings.push(w),
+    onError,
+    onWarn: w => {
+      warnings.push(w)
+      compilerOptions.onWarn?.(w)
+    },
   })
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only

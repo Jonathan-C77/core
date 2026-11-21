@@ -182,11 +182,12 @@ export function resolveTransitionProps(
   } = baseProps
 
   const finishEnter = (
-    el: Element & { _enterCancelled?: boolean },
+    el: Element & { _enterResolve?: () => void; _enterCancelled?: boolean },
     isAppear: boolean,
     done?: () => void,
     isCancelled?: boolean,
   ) => {
+    el._enterResolve = undefined
     el._enterCancelled = isCancelled
     removeTransitionClass(el, isAppear ? appearToClass : enterToClass)
     removeTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
@@ -194,9 +195,10 @@ export function resolveTransitionProps(
   }
 
   const finishLeave = (
-    el: Element & { _isLeaving?: boolean },
+    el: Element & { _isLeaving?: boolean; _leaveResolve?: () => void },
     done?: () => void,
   ) => {
+    el._leaveResolve = undefined
     el._isLeaving = false
     removeTransitionClass(el, leaveFromClass)
     removeTransitionClass(el, leaveToClass)
@@ -205,9 +207,16 @@ export function resolveTransitionProps(
   }
 
   const makeEnterHook = (isAppear: boolean) => {
-    return (el: Element, done: () => void) => {
+    return (el: Element & { _enterResolve?: () => void }, done: () => void) => {
       const hook = isAppear ? onAppear : onEnter
-      const resolve = () => finishEnter(el, isAppear, done)
+      // identifies this enter on the element: cleared once it finishes or is
+      // cancelled, replaced when a later enter starts
+      const resolve = () => {
+        if (el._enterResolve === resolve) {
+          finishEnter(el, isAppear, done)
+        }
+      }
+      el._enterResolve = resolve
       callHook(hook, [el, resolve])
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
@@ -218,6 +227,10 @@ export function resolveTransitionProps(
           if (legacyClass) {
             removeTransitionClass(el, legacyClass)
           }
+        }
+        if (el._enterResolve !== resolve) {
+          // cancelled, finished, or superseded
+          return
         }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!hasExplicitCallback(hook)) {
@@ -247,11 +260,22 @@ export function resolveTransitionProps(
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(
-      el: Element & { _isLeaving?: boolean; _enterCancelled?: boolean },
+      el: Element & {
+        _isLeaving?: boolean
+        _leaveResolve?: () => void
+        _enterCancelled?: boolean
+      },
       done,
     ) {
       el._isLeaving = true
-      const resolve = () => finishLeave(el, done)
+      // identifies this leave on the element, like `_enterResolve`: cleared once
+      // it finishes or is cancelled, replaced when a later leave starts
+      const resolve = () => {
+        if (el._leaveResolve === resolve) {
+          finishLeave(el, done)
+        }
+      }
+      el._leaveResolve = resolve
       addTransitionClass(el, leaveFromClass)
       if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
         addTransitionClass(el, legacyLeaveFromClass)
@@ -260,15 +284,15 @@ export function resolveTransitionProps(
       // the css will not get the final state (#10677)
       if (!el._enterCancelled) {
         // force reflow so *-leave-from classes immediately take effect (#2593)
-        forceReflow()
+        forceReflow(el)
         addTransitionClass(el, leaveActiveClass)
       } else {
         addTransitionClass(el, leaveActiveClass)
-        forceReflow()
+        forceReflow(el)
       }
       nextFrame(() => {
-        if (!el._isLeaving) {
-          // cancelled
+        if (el._leaveResolve !== resolve) {
+          // cancelled, finished, or superseded
           return
         }
         removeTransitionClass(el, leaveFromClass)
@@ -395,8 +419,7 @@ interface CSSTransitionInfo {
 
 type AnimationProperties = 'Delay' | 'Duration'
 type StylePropertiesKey =
-  | `${AnimationTypes}${AnimationProperties}`
-  | `${typeof TRANSITION}Property`
+  `${AnimationTypes}${AnimationProperties}` | `${typeof TRANSITION}Property`
 
 export function getTransitionInfo(
   el: Element,
@@ -447,7 +470,7 @@ export function getTransitionInfo(
   }
   const hasTransform =
     type === TRANSITION &&
-    /\b(transform|all)(,|$)/.test(
+    /\b(?:transform|all)(?:,|$)/.test(
       getStyleProperties(`${TRANSITION}Property`).toString(),
     )
   return {
@@ -476,6 +499,7 @@ function toMs(s: string): number {
 }
 
 // synchronously force layout to put elements into a certain state
-export function forceReflow(): number {
-  return document.body.offsetHeight
+export function forceReflow(el?: Node): number {
+  const targetDocument = el ? el.ownerDocument! : document
+  return targetDocument.body.offsetHeight
 }

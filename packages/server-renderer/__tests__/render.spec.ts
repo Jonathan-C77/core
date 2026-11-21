@@ -12,6 +12,7 @@ import {
   defineComponent,
   getCurrentInstance,
   h,
+  nextTick,
   onErrorCaptured,
   onServerPrefetch,
   reactive,
@@ -19,6 +20,7 @@ import {
   renderSlot,
   resolveComponent,
   resolveDynamicComponent,
+  watch,
   watchEffect,
   withCtx,
 } from 'vue'
@@ -36,9 +38,7 @@ const promisifyStream = (stream: Readable) => {
     stream.on('data', data => {
       result += data
     })
-    stream.on('error', () => {
-      reject(result)
-    })
+    stream.on('error', reject)
     stream.on('end', () => {
       resolve(result)
     })
@@ -663,6 +663,9 @@ function testRender(type: string, render: typeof renderToString) {
             ),
           ),
         ).toBe(`<div><span>hello</span></div>`)
+        expect(
+          `The \`innerHTML\` prop on <div> will override its children`,
+        ).toHaveBeenWarned()
       })
 
       test('textContent', async () => {
@@ -677,6 +680,9 @@ function testRender(type: string, render: typeof renderToString) {
             ),
           ),
         ).toBe(`<div>${escapeHtml(`<span>hello</span>`)}</div>`)
+        expect(
+          `The \`textContent\` prop on <div> will override its children`,
+        ).toHaveBeenWarned()
       })
 
       test('textarea value', async () => {
@@ -692,6 +698,43 @@ function testRender(type: string, render: typeof renderToString) {
           ),
         ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
       })
+
+      test.each(['', 0, false])('falsy content overrides: %j', async value => {
+        for (const children of ['ignored', [h('span', 'ignored')]]) {
+          expect(await render(h('div', { innerHTML: value }, children))).toBe(
+            `<div>${value}</div>`,
+          )
+          expect(
+            `The \`innerHTML\` prop on <div> will override its children`,
+          ).toHaveBeenWarned()
+
+          expect(await render(h('div', { textContent: value }, children))).toBe(
+            `<div>${value}</div>`,
+          )
+          expect(
+            `The \`textContent\` prop on <div> will override its children`,
+          ).toHaveBeenWarned()
+
+          expect(await render(h('textarea', { value }, children))).toBe(
+            `<textarea>${value}</textarea>`,
+          )
+        }
+      })
+
+      test.each([null, undefined])(
+        'nullish content overrides preserve children: %j',
+        async value => {
+          expect(await render(h('div', { innerHTML: value }, 'fallback'))).toBe(
+            `<div>fallback</div>`,
+          )
+          expect(
+            await render(h('div', { textContent: value }, 'fallback')),
+          ).toBe(`<div>fallback</div>`)
+          expect(await render(h('textarea', { value }, 'fallback'))).toBe(
+            `<textarea>fallback</textarea>`,
+          )
+        },
+      )
     })
 
     describe('vnode component', () => {
@@ -728,9 +771,12 @@ function testRender(type: string, render: typeof renderToString) {
               createCommentVNode('->foo'),
               createCommentVNode('<!--foo-->'),
               createCommentVNode('--!>foo<!-'),
+              createCommentVNode('--<!--><img src=x onerror=alert(1)>'),
             ]),
           ),
-        ).toBe(`<div><!--foo--><!--foo--><!--foo--><!--foo--></div>`)
+        ).toBe(
+          `<div><!--foo--><!--foo--><!--foo--><!--foo--><!--<img src=x onerror=alert(1)>--></div>`,
+        )
       })
 
       test('Static', async () => {
@@ -792,6 +838,44 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(`<div>hello</div>`)
       })
 
+      test('static style', async () => {
+        expect(
+          await render(
+            createApp({
+              components: {
+                Child: {
+                  inheritAttrs: false,
+                  template: `<i>{{ JSON.stringify($attrs.style) }}</i>`,
+                },
+              },
+              data: () => ({ dynamic: { color: 'blue' }, obj: { id: 'a' } }),
+              template:
+                `<div>` +
+                `<p style="color: red; --Custom-Prop: 1px; z-index: 1; font-size: 14px !important"></p>` +
+                `<p style="font-family: &quot;A&amp;B&quot;; background: url('a.png?x=1&y=2')"></p>` +
+                `<p style="color: red" v-show="false"></p>` +
+                `<p style="color: red; margin: 0" :style="dynamic"></p>` +
+                `<p :style="dynamic" style="color: red; margin: 0"></p>` +
+                `<p style="color: red" v-bind="obj"></p>` +
+                `<svg><path style="stroke-width: 2"/></svg>` +
+                `<Child style="color: red; z-index: 1" />` +
+                `</div>`,
+            }),
+          ),
+        ).toBe(
+          `<div>` +
+            `<p style="color:red;--Custom-Prop:1px;z-index:1;font-size:14px !important;"></p>` +
+            `<p style="font-family:&quot;A&amp;B&quot;;background:url(&#39;a.png?x=1&amp;y=2&#39;);"></p>` +
+            `<p style="color:red;display:none;"></p>` +
+            `<p style="color:blue;margin:0;"></p>` +
+            `<p style="color:red;margin:0;"></p>` +
+            `<p style="color:red;" id="a"></p>` +
+            `<svg><path style="stroke-width:2;"></path></svg>` +
+            `<i>{&quot;color&quot;:&quot;red&quot;,&quot;z-index&quot;:&quot;1&quot;}</i>` +
+            `</div>`,
+        )
+      })
+
       test('handle compiler errors', async () => {
         await render(
           // render different content since compilation is cached
@@ -819,6 +903,9 @@ function testRender(type: string, render: typeof renderToString) {
           )
         } catch {}
         expect(getCurrentInstance()).toBe(prev)
+        expect(
+          '[Vue warn]: Unhandled error during execution of render function',
+        ).toHaveBeenWarned()
       })
 
       // #7733
@@ -932,7 +1019,7 @@ function testRender(type: string, render: typeof renderToString) {
       }
 
       const html = await renderToString(app)
-      expect(html).toBe(`<div class="app"><div>asyncChildren</div></div>`)
+      expect(html).toBe(`<div class="app"><!----></div>`)
 
       expect(fn).toHaveBeenCalledTimes(1)
       expect(fn).toBeCalledWith('async child error')
@@ -1188,6 +1275,34 @@ function testRender(type: string, render: typeof renderToString) {
       expect((capturedError as unknown as Error).message).toBe('An error')
     })
 
+    test('async setup throwing error', async () => {
+      const capturedError: string[] = []
+
+      const Child = {
+        async setup() {
+          await nextTick()
+          throw new Error('An error')
+          return { foo: { bar: 1 } }
+        },
+        template: `<span>{{ foo.bar }}</span>`,
+      }
+
+      const app = createApp({
+        components: { Child },
+        setup() {
+          onErrorCaptured(e => {
+            capturedError.push(e.message)
+            return false
+          })
+        },
+        template: `<Suspense><Child /></Suspense>`,
+      })
+
+      // the failed component renders nothing, not its template
+      expect(await render(app)).toBe('<!---->')
+      expect(capturedError).toStrictEqual(['An error'])
+    })
+
     test('computed reactivity during SSR with onServerPrefetch', async () => {
       const store = {
         // initial state could be hydrated
@@ -1228,6 +1343,295 @@ function testRender(type: string, render: typeof renderToString) {
       // should only be called twice since access should be cached
       // during the render phase
       expect(getterSpy).toHaveBeenCalledTimes(2)
+    })
+
+    test('props modifiers in render attrs', async () => {
+      const app = createApp({
+        setup() {
+          return () =>
+            h(
+              'div',
+              {
+                '^attr': 'attr',
+                '.prop': 'prop',
+              },
+              'Functional Component',
+            )
+        },
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div attr="attr">Functional Component</div>`)
+    })
+
+    test('should propagate unhandled async setup errors', async () => {
+      const error = new Error('setup failed')
+      const app = createApp({
+        async setup() {
+          throw error
+        },
+        render: () => h('div', 'should not render'),
+      })
+
+      await expect(render(app)).rejects.toBe(error)
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
+    })
+
+    test('should render nothing for a component whose async setup rejects', async () => {
+      const errorHandler = vi.fn()
+      const app = createApp({
+        components: {
+          Bad: {
+            async setup() {
+              throw new Error('setup failed')
+            },
+            template: '<div>should not render</div>',
+          },
+        },
+        template: '<div><Bad /></div>',
+      })
+      app.config.errorHandler = errorHandler
+
+      expect(await render(app)).toBe('<div><!----></div>')
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+    })
+
+    test('should recover from synchronous onServerPrefetch errors', async () => {
+      const app = createApp({
+        setup() {
+          onServerPrefetch(() => {
+            throw new Error('prefetch failed')
+          })
+          return () => h('div', 'rendered')
+        },
+      })
+
+      expect(await render(app)).toBe('<div>rendered</div>')
+      expect(
+        'Unhandled error during execution of serverPrefetch hook',
+      ).toHaveBeenWarned()
+    })
+
+    test('should handle async setup rejection while awaiting an earlier sibling', async () => {
+      let resolveSlow!: () => void
+      const slow = new Promise<void>(resolve => {
+        resolveSlow = resolve
+      })
+      const error = new Error('setup failed')
+      const app = createApp({
+        components: {
+          Slow: {
+            async setup() {
+              await slow
+              return () => h('div', 'slow')
+            },
+          },
+          Bad: {
+            async setup() {
+              throw error
+            },
+          },
+        },
+        template: '<div><Slow /><Bad /></div>',
+      })
+
+      const result = render(app).catch(error => error)
+      // Allow unhandled rejections to surface before the buffer reaches Bad.
+      await new Promise<void>(resolve => setImmediate(resolve))
+      resolveSlow()
+
+      expect(await result).toBe(error)
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
+    })
+
+    test('should handle render error while awaiting an earlier sibling', async () => {
+      let resolveSlow!: () => void
+      const slow = new Promise<void>(resolve => {
+        resolveSlow = resolve
+      })
+      const error = new Error('render failed')
+      const Slow = {
+        async setup() {
+          await slow
+          return () => h('div', 'slow')
+        },
+      }
+      const Bad = {
+        setup() {
+          return {
+            fail() {
+              throw error
+            },
+          }
+        },
+        template: `<div>{{ fail() }}</div>`,
+      }
+      const app = createApp({
+        render: () => h('div', [h(Slow), h(Bad)]),
+      })
+
+      const result = render(app).catch(error => error)
+      // Allow unhandled rejections to surface before the buffer reaches Bad.
+      await new Promise<void>(resolve => setImmediate(resolve))
+      resolveSlow()
+
+      expect(await result).toBe(error)
+      expect(
+        'Unhandled error during execution of render function',
+      ).toHaveBeenWarned()
+    })
+
+    test('should stop sync watchers when async setup errors', async () => {
+      const source = ref(0)
+      const spy = vi.fn()
+      const error = new Error('setup failed')
+      const Watcher = {
+        setup() {
+          watch(source, spy, { flush: 'sync' })
+          return () => h('div')
+        },
+      }
+      const Bad = {
+        async setup() {
+          throw error
+        },
+      }
+      const app = createApp({
+        render: () => h('div', [h(Watcher), h(Bad)]),
+      })
+
+      await expect(render(app)).rejects.toBe(error)
+      source.value++
+      expect(spy).not.toHaveBeenCalled()
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
+    })
+
+    test('should stop sync watchers registered after a failed render', async () => {
+      const source = ref(0)
+      const spy = vi.fn()
+      const error = new Error('setup failed')
+      let resolveSlow!: () => void
+      const slow = new Promise<void>(resolve => {
+        resolveSlow = resolve
+      })
+      const Watcher = {
+        setup() {
+          watch(source, spy, { flush: 'sync' })
+          return () => h('div')
+        },
+      }
+      const Bad = {
+        async setup() {
+          throw error
+        },
+      }
+      const Slow = {
+        async setup() {
+          await slow
+          return () => h(Watcher)
+        },
+      }
+      const app = createApp({
+        render: () => h('div', [h(Bad), h(Slow)]),
+      })
+
+      await expect(render(app)).rejects.toBe(error)
+      resolveSlow()
+      await new Promise<void>(resolve => setTimeout(resolve))
+      source.value++
+      expect(spy).not.toHaveBeenCalled()
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
+    })
+
+    describe('watcher cleanup errors', () => {
+      const cleanupError = new Error('cleanup failed')
+      const cleanup = vi.fn(() => {
+        throw cleanupError
+      })
+      const ThrowingCleanup = {
+        setup() {
+          watchEffect(onCleanup => onCleanup(cleanup), { flush: 'sync' })
+          return () => h('div')
+        },
+      }
+
+      beforeEach(() => {
+        cleanup.mockClear()
+      })
+
+      test('after a successful render', async () => {
+        const app = createApp({
+          render: () => h(ThrowingCleanup),
+        })
+
+        await expect(render(app)).rejects.toBe(cleanupError)
+        expect(cleanup).toHaveBeenCalledTimes(1)
+        expect(
+          'Unhandled error during execution of watcher cleanup function',
+        ).toHaveBeenWarned()
+      })
+
+      test('should not mask the render error', async () => {
+        const error = new Error('setup failed')
+        const Bad = {
+          async setup() {
+            throw error
+          },
+        }
+        const app = createApp({
+          render: () => h('div', [h(ThrowingCleanup), h(Bad)]),
+        })
+
+        await expect(render(app)).rejects.toBe(error)
+        await new Promise<void>(resolve => setTimeout(resolve))
+        expect(cleanup).toHaveBeenCalledTimes(1)
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarned()
+        expect(
+          'Unhandled error during execution of watcher cleanup function',
+        ).toHaveBeenWarned()
+      })
+
+      test('for watchers registered after a failed render', async () => {
+        const error = new Error('setup failed')
+        let resolveSlow!: () => void
+        const slow = new Promise<void>(resolve => {
+          resolveSlow = resolve
+        })
+        const Bad = {
+          async setup() {
+            throw error
+          },
+        }
+        const Slow = {
+          async setup() {
+            await slow
+            return () => h(ThrowingCleanup)
+          },
+        }
+        const app = createApp({
+          render: () => h('div', [h(Bad), h(Slow)]),
+        })
+
+        await expect(render(app)).rejects.toBe(error)
+        resolveSlow()
+        await new Promise<void>(resolve => setTimeout(resolve))
+        expect(cleanup).toHaveBeenCalledTimes(1)
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarned()
+        expect(
+          'Unhandled error during execution of watcher cleanup function',
+        ).toHaveBeenWarned()
+      })
     })
   })
 }

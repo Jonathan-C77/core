@@ -1,19 +1,37 @@
 import { TrackOpTypes } from './constants'
 import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
-import { isProxy, isShallow, toRaw, toReactive } from './reactive'
+import {
+  isProxy,
+  isReactive,
+  isReadonly,
+  isShallow,
+  toRaw,
+  toReactive,
+  toReadonly,
+} from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
 import { isArray } from '@vue/shared'
 
 /**
  * Track array iteration and return:
  * - if input is reactive: a cloned raw array with reactive values
- * - if input is non-reactive or shallowReactive: the original raw array
+ * - if input is readonly: a cloned raw array with readonly values, preserving
+ *   reactivity
+ * - if input is raw or shallow: the original raw array
  */
 export function reactiveReadArray<T>(array: T[]): T[] {
   const raw = toRaw(array)
   if (raw === array) return raw
   track(raw, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
-  return isShallow(array) ? raw : raw.map(toReactive)
+  if (isShallow(array)) return raw
+  if (!isReadonly(array)) return raw.map(toReactive)
+
+  // Preserve proxy layers without checking the array's flags for every element.
+  return (
+    isReactive(array)
+      ? raw.map(item => toReadonly(toReactive(item)))
+      : raw.map(toReadonly)
+  ) as T[]
 }
 
 /**
@@ -24,11 +42,18 @@ export function shallowReadArray<T>(arr: T[]): T[] {
   return arr
 }
 
+function toWrapped(target: unknown, item: unknown) {
+  if (isReadonly(target)) {
+    return isReactive(target) ? toReadonly(toReactive(item)) : toReadonly(item)
+  }
+  return toReactive(item)
+}
+
 export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   __proto__: null,
 
   [Symbol.iterator]() {
-    return iterator(this, Symbol.iterator, toReactive)
+    return iterator(this, Symbol.iterator, item => toWrapped(this, item))
   },
 
   concat(...args: unknown[]) {
@@ -39,7 +64,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   entries() {
     return iterator(this, 'entries', (value: [number, unknown]) => {
-      value[1] = toReactive(value[1])
+      value[1] = toWrapped(this, value[1])
       return value
     })
   },
@@ -55,14 +80,28 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive), arguments)
+    return apply(
+      this,
+      'filter',
+      fn,
+      thisArg,
+      v => v.map((item: unknown) => toWrapped(this, item)),
+      arguments,
+    )
   },
 
   find(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'find', fn, thisArg, toReactive, arguments)
+    return apply(
+      this,
+      'find',
+      fn,
+      thisArg,
+      item => toWrapped(this, item),
+      arguments,
+    )
   },
 
   findIndex(
@@ -76,7 +115,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findLast', fn, thisArg, toReactive, arguments)
+    return apply(
+      this,
+      'findLast',
+      fn,
+      thisArg,
+      item => toWrapped(this, item),
+      arguments,
+    )
   },
 
   findLastIndex(
@@ -189,7 +235,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   values() {
-    return iterator(this, 'values', toReactive)
+    return iterator(this, 'values', item => toWrapped(this, item))
   },
 }
 
@@ -208,20 +254,50 @@ function iterator(
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
   const arr = shallowReadArray(self)
-  const iter = (arr[method] as any)() as IterableIterator<unknown> & {
+  const methodFn = arr[method] as any
+  const iter = methodFn.call(arr) as IterableIterator<unknown> & {
     _next: IterableIterator<unknown>['next']
   }
   if (arr !== self && !isShallow(self)) {
-    iter._next = iter.next
-    iter.next = () => {
-      const result = iter._next()
-      if (result.value) {
-        result.value = wrapValue(result.value)
+    // #15643 an own `next` on a native array iterator permanently disables
+    // V8's array iteration fast paths (spread, Array.from, etc.) for the whole
+    // isolate, so it is wrapped instead. Checked on the iterator itself as
+    // user-extended or cross-realm arrays can return native iterators too.
+    if ((iter as any)[Symbol.toStringTag] === 'Array Iterator') {
+      const wrapped = Object.create(Object.getPrototypeOf(iter))
+      wrapped.next = () => wrapResult(iter.next(), wrapValue)
+      if (methodFn !== arrayProto[method]) {
+        Object.defineProperties(wrapped, {
+          return: {
+            get() {
+              const fn = iter.return
+              return typeof fn === 'function' ? fn.bind(iter) : fn
+            },
+          },
+          throw: {
+            get() {
+              const fn = iter.throw
+              return typeof fn === 'function' ? fn.bind(iter) : fn
+            },
+          },
+        })
       }
-      return result
+      return wrapped
     }
+    iter._next = iter.next
+    iter.next = () => wrapResult(iter._next(), wrapValue)
   }
   return iter
+}
+
+function wrapResult(
+  result: IteratorResult<unknown>,
+  wrapValue: (value: any) => unknown,
+) {
+  if (!result.done) {
+    result.value = wrapValue(result.value)
+  }
+  return result
 }
 
 // in the codebase we enforce es2016, but user code may run in environments
@@ -257,7 +333,7 @@ function apply(
   if (arr !== self) {
     if (needsWrap) {
       wrappedFn = function (this: unknown, item, index) {
-        return fn.call(this, toReactive(item), index, self)
+        return fn.call(this, toWrapped(self, item), index, self)
       }
     } else if (fn.length > 2) {
       wrappedFn = function (this: unknown, item, index) {
@@ -277,11 +353,18 @@ function reduce(
   args: unknown[],
 ) {
   const arr = shallowReadArray(self)
+  const needsWrap = arr !== self && !isShallow(self)
   let wrappedFn = fn
+  let wrapInitialAccumulator = false
   if (arr !== self) {
-    if (!isShallow(self)) {
+    if (needsWrap) {
+      wrapInitialAccumulator = args.length === 0
       wrappedFn = function (this: unknown, acc, item, index) {
-        return fn.call(this, acc, toReactive(item), index, self)
+        if (wrapInitialAccumulator) {
+          wrapInitialAccumulator = false
+          acc = toWrapped(self, acc)
+        }
+        return fn.call(this, acc, toWrapped(self, item), index, self)
       }
     } else if (fn.length > 3) {
       wrappedFn = function (this: unknown, acc, item, index) {
@@ -289,7 +372,8 @@ function reduce(
       }
     }
   }
-  return (arr[method] as any)(wrappedFn, ...args)
+  const result = (arr[method] as any)(wrappedFn, ...args)
+  return wrapInitialAccumulator ? toWrapped(self, result) : result
 }
 
 // instrument identity-sensitive methods to account for reactive proxies

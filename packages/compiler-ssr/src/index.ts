@@ -12,10 +12,13 @@ import {
   transformBind,
   transformExpression,
   transformOn,
-  transformStyle,
+  transformVBindShorthand,
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
-import { ssrTransformElement } from './transforms/ssrTransformElement'
+import {
+  ssrTransformElement,
+  ssrTransformStyle,
+} from './transforms/ssrTransformElement'
 import {
   rawOptionsMap,
   ssrTransformComponent,
@@ -55,6 +58,7 @@ export function compile(
     ...options,
     hoistStatic: false,
     nodeTransforms: [
+      transformVBindShorthand,
       ssrTransformIf,
       ssrTransformFor,
       trackVForSlotScopes,
@@ -65,7 +69,7 @@ export function compile(
       ssrTransformElement,
       ssrTransformComponent,
       trackSlotScopes,
-      transformStyle,
+      ssrTransformStyle,
       ...(options.nodeTransforms || []), // user transforms
     ],
     directiveTransforms: {

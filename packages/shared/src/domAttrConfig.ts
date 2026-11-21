@@ -1,17 +1,23 @@
 import { makeMap } from './makeMap'
+import { extend } from './general'
 
 /**
  * On the client we only need to offer special cases for boolean attributes that
  * have different names from their corresponding dom properties:
  * - itemscope -> N/A
  * - allowfullscreen -> allowFullscreen
+ * - disablepictureinpicture -> disablePictureInPicture
+ * - disableremoteplayback -> disableRemotePlayback
  * - formnovalidate -> formNoValidate
  * - ismap -> isMap
  * - nomodule -> noModule
  * - novalidate -> noValidate
+ * - playsinline -> playsInline
  * - readonly -> readOnly
  */
-const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`
+const specialBooleanAttrs =
+  `itemscope,allowfullscreen,disablepictureinpicture,disableremoteplayback,` +
+  `formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`
 export const isSpecialBooleanAttr: (key: string) => boolean =
   /*@__PURE__*/ makeMap(specialBooleanAttrs)
 
@@ -20,7 +26,7 @@ export const isSpecialBooleanAttr: (key: string) => boolean =
  */
 export const isBooleanAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
   specialBooleanAttrs +
-    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
+    `,async,autofocus,autoplay,controls,default,defer,disabled,` +
     `inert,loop,open,required,reversed,scoped,seamless,` +
     `checked,muted,multiple,selected`,
 )
@@ -33,26 +39,23 @@ export function includeBooleanAttr(value: unknown): boolean {
   return !!value || value === ''
 }
 
-const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
-const attrValidationCache: Record<string, boolean> = {}
+const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u000d\u0020]/
 
 export function isSSRSafeAttrName(name: string): boolean {
-  if (attrValidationCache.hasOwnProperty(name)) {
-    return attrValidationCache[name]
-  }
   const isUnsafe = unsafeAttrCharRE.test(name)
   if (isUnsafe) {
     console.error(`unsafe attribute name: ${name}`)
   }
-  return (attrValidationCache[name] = !isUnsafe)
+  return !isUnsafe
 }
 
-export const propsToAttrMap: Record<string, string | undefined> = {
-  acceptCharset: 'accept-charset',
-  className: 'class',
-  htmlFor: 'for',
-  httpEquiv: 'http-equiv',
-}
+export const propsToAttrMap: Record<string, string | undefined> =
+  /*@__PURE__*/ extend(Object.create(null), {
+    acceptCharset: 'accept-charset',
+    className: 'class',
+    htmlFor: 'for',
+    httpEquiv: 'http-equiv',
+  })
 
 /**
  * Known attributes, this is used for stringification of runtime static nodes

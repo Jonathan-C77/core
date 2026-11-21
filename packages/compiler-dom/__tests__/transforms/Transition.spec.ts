@@ -135,6 +135,18 @@ describe('Transition multi children warnings', () => {
       false,
     )
   })
+
+  test('non-breaking spaces are treated as normal text', () => {
+    checkWarning(
+      `
+      <transition>
+        \u00a0
+        <div>foo</div>
+      </transition>
+      `,
+      true,
+    )
+  })
 })
 
 test('inject persisted when child has v-show', () => {
@@ -145,6 +157,38 @@ test('inject persisted when child has v-show', () => {
     </transition>
     `).code,
   ).toMatchSnapshot()
+})
+
+test('inject persisted when child has v-show in production', async () => {
+  __DEV__ = false
+  vi.resetModules()
+  try {
+    const { compile: prodCompile } = await import('../../src')
+    expect(
+      prodCompile(`
+      <transition>
+        <div v-show="ok" />
+      </transition>
+      `).code,
+    ).toMatch(`persisted: ""`)
+    expect(
+      prodCompile(
+        `
+        <transition>
+          <!-- comment -->
+          <div v-show="ok" />
+        </transition>
+        `,
+        { comments: true },
+      ).code,
+    ).toMatch(`persisted: ""`)
+
+    const onError = vi.fn()
+    prodCompile(`<transition><div/><div/></transition>`, { onError })
+    expect(onError).not.toHaveBeenCalled()
+  } finally {
+    __DEV__ = true
+  }
 })
 
 test('the v-if/else-if/else branches in Transition should ignore comments', () => {
@@ -162,5 +206,21 @@ test('the v-if/else-if/else branches in Transition should ignore comments', () =
       </div>
     </transition>
     `).code,
+  ).toMatchSnapshot()
+})
+
+test('comments and preserved whitespace are ignored', () => {
+  expect(
+    compile(
+      `
+      <transition>
+        <!-- foo --> <!-- bar -->
+        <div>foo bar</div>
+      </transition>
+      `,
+      {
+        whitespace: 'preserve',
+      },
+    ).code,
   ).toMatchSnapshot()
 })

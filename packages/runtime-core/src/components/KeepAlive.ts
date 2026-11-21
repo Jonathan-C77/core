@@ -21,7 +21,6 @@ import {
   injectHook,
   onBeforeUnmount,
   onMounted,
-  onUnmounted,
   onUpdated,
 } from '../apiLifecycle'
 import {
@@ -48,6 +47,7 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -70,7 +70,8 @@ export interface KeepAliveContext extends ComponentRenderContext {
     namespace: ElementNamespace,
     optimized: boolean,
   ) => void
-  deactivate: (vnode: VNode) => void
+  // returns false for a child that is not cached: the caller unmounts it
+  deactivate: (vnode: VNode) => boolean
 }
 
 export const isKeepAlive = (vnode: VNode): boolean =>
@@ -167,6 +168,16 @@ const KeepAliveImpl: ComponentOptions = {
     }
 
     sharedContext.deactivate = (vnode: VNode) => {
+      // the child enters the cache from the mounted/updated hooks, deferred to
+      // the boundary resolve under Suspense. One unmounted before that (a
+      // discarded pending branch, a KeepAlive torn down in one) is not cached
+      // and never will be: parked in the storage container it would leak.
+      const cached = cache.get(
+        vnode.key == null ? (vnode.type as ConcreteComponent) : vnode.key,
+      )
+      if (!cached || cached.component !== vnode.component) {
+        return false
+      }
       const instance = vnode.component!
       invalidateMount(instance.m)
       invalidateMount(instance.a)
@@ -192,6 +203,7 @@ const KeepAliveImpl: ComponentOptions = {
       if (__DEV__ && __BROWSER__) {
         ;(instance as any).__keepAliveStorageContainer = storageContainer
       }
+      return true
     }
 
     function unmount(vnode: VNode) {
@@ -202,7 +214,13 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getComponentName(vnode.type as ConcreteComponent)
+        // for async components, name check should be based in its loaded
+        // inner component if available
+        const name = getComponentName(
+          isAsyncWrapper(vnode)
+            ? (vnode.type as ComponentOptions).__asyncResolved || {}
+            : (vnode.type as ConcreteComponent),
+        )
         if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
@@ -217,6 +235,7 @@ const KeepAliveImpl: ComponentOptions = {
         // current active instance should no longer be kept-alive.
         // we can't unmount it now but it might be later, so reset its flag now.
         resetShapeFlag(current)
+        if (cached) resetShapeFlag(cached)
       }
       cache.delete(key)
       keys.delete(key)
@@ -241,9 +260,19 @@ const KeepAliveImpl: ComponentOptions = {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
-          queuePostRenderEffect(() => {
-            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
-          }, instance.subTree.suspense)
+          const cacheInnerChild = () => {
+            const vnode = getInnerChild(instance.subTree)
+            if (vnode.component) {
+              cache.set(pendingCacheKey!, vnode)
+            }
+          }
+          // only a pending boundary defers the cache: a toggle before the
+          // deferred job runs would otherwise leave the child uncached
+          if (instance.subTree.suspense!.pendingBranch) {
+            queuePostRenderEffect(cacheInnerChild, instance.subTree.suspense)
+          } else {
+            cacheInnerChild()
+          }
         } else {
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))
         }
@@ -460,9 +489,14 @@ function injectToKeepAliveRoot(
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.
   const injected = injectHook(type, hook, keepAliveRoot, true /* prepend */)
-  onUnmounted(() => {
-    remove(keepAliveRoot[type]!, injected)
-  }, target)
+  // the removal must outlive a discarded pending branch, which drops the
+  // unmount hooks
+  const removal = injectHook(
+    LifecycleHooks.UNMOUNTED,
+    () => remove(keepAliveRoot[type]!, injected),
+    target,
+  ) as SchedulerJob
+  removal.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
 }
 
 function resetShapeFlag(vnode: VNode) {

@@ -579,6 +579,24 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_MODEL_ON_PROPS,
+          message: expect.stringContaining('defineModel()'),
+        }),
+      )
+    })
+
+    test('used on const binding', () => {
+      const onError = vi.fn()
+      parseWithVModel('<div v-model="c" />', {
+        onError,
+        bindingMetadata: {
+          c: BindingTypes.LITERAL_CONST,
+        },
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_CONST,
         }),
       )
     })

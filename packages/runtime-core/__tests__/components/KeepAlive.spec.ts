@@ -627,6 +627,34 @@ describe('KeepAlive', () => {
       // C should be pruned because B was used last so C is the oldest cached
       assertCount([2, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 1])
     })
+
+    // #15710
+    test('max should unmount pruned current component when reusing mounted vnode', async () => {
+      const viewRef = ref('one')
+      const reuse = ref(false)
+      let prev: any
+      const App = {
+        render() {
+          if (reuse.value && prev) return prev
+          return (prev = h(KeepAlive, { max: 1 }, () =>
+            h(views[viewRef.value]),
+          ))
+        },
+      }
+      render(h(App), root)
+      expect(serializeInner(root)).toBe(`<div>one</div>`)
+
+      reuse.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>one</div>`)
+
+      reuse.value = false
+      viewRef.value = 'two'
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>two</div>`)
+      expect(one.deactivated).not.toHaveBeenCalled()
+      expect(one.unmounted).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('cache invalidation', () => {
@@ -1172,5 +1200,54 @@ describe('KeepAlive', () => {
     await nextTick()
     expect(deactivatedHome).toHaveBeenCalledTimes(0)
     expect(unmountedHome).toHaveBeenCalledTimes(1)
+  })
+
+  test('should work with async component when update `include` props', async () => {
+    let resolve: (comp: Component) => void
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const keepaliveInclude = ref(['Foo'])
+    const App = {
+      render: () => {
+        return h(KeepAlive, { include: keepaliveInclude.value }, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null,
+        )
+      },
+    }
+
+    render(h(App), root)
+    // async component has not been resolved
+    expect(serializeInner(root)).toBe('<!---->')
+
+    resolve!({
+      name: 'Foo',
+      data: () => ({ count: 0 }),
+      render() {
+        return h('p', this.count)
+      },
+    })
+
+    await timeout()
+    // resolved
+    expect(serializeInner(root)).toBe('<p>0</p>')
+
+    // change state + toggle out + update `include` props
+    instanceRef.value.count++
+    toggle.value = false
+    keepaliveInclude.value = ['Foo']
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+
+    // toggle in, state should be maintained
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>1</p>')
   })
 })

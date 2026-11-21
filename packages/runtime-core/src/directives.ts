@@ -12,7 +12,7 @@ return withDirectives(h(comp), [
 */
 
 import type { VNode } from './vnode'
-import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, extend, isBuiltInDirective, isFunction } from '@vue/shared'
 import { warn } from './warning'
 import {
   type ComponentInternalInstance,
@@ -28,14 +28,14 @@ import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
 export interface DirectiveBinding<
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > {
   instance: ComponentPublicInstance | Record<string, any> | null
   value: Value
   oldValue: Value | null
   arg?: Arg
   modifiers: DirectiveModifiers<Modifiers>
-  dir: ObjectDirective<any, Value>
+  dir: ObjectDirective<any, Value, Modifiers, Arg>
 }
 
 export type DirectiveHook<
@@ -43,7 +43,7 @@ export type DirectiveHook<
   Prev = VNode<any, HostElement> | null,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = (
   el: HostElement,
   binding: DirectiveBinding<Value, Modifiers, Arg>,
@@ -54,7 +54,7 @@ export type DirectiveHook<
 export type SSRDirectiveHook<
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = (
   binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode,
@@ -64,7 +64,7 @@ export interface ObjectDirective<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > {
   /**
    * @internal without this, ts-expect-error in directives.test-d.ts somehow
@@ -99,14 +99,14 @@ export type FunctionDirective<
   HostElement = any,
   V = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = DirectiveHook<HostElement, any, V, Modifiers, Arg>
 
 export type Directive<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > =
   | ObjectDirective<HostElement, Value, Modifiers, Arg>
   | FunctionDirective<HostElement, Value, Modifiers, Arg>
@@ -125,8 +125,8 @@ export function validateDirectiveName(name: string): void {
 export type DirectiveArguments = Array<
   | [Directive | undefined]
   | [Directive | undefined, any]
-  | [Directive | undefined, any, string]
-  | [Directive | undefined, any, string | undefined, DirectiveModifiers]
+  | [Directive | undefined, any, any]
+  | [Directive | undefined, any, any, DirectiveModifiers]
 >
 
 /**
@@ -167,18 +167,46 @@ export function withDirectives<T extends VNode>(
   return vnode
 }
 
+type DirectiveVNode = VNode & {
+  _mount?: DirectiveVNode
+  _latest?: DirectiveVNode
+}
+
 export function invokeDirectiveHook(
-  vnode: VNode,
-  prevVNode: VNode | null,
+  vnode: DirectiveVNode,
+  prevVNode: DirectiveVNode | null,
   instance: ComponentInternalInstance | null,
   name: keyof ObjectDirective,
 ): void {
-  const bindings = vnode.dirs!
+  // Inherited bindings can be shared by different component roots, so track
+  // pending mounts on the vnodes in the same element's update chain.
+  let hookVNode = vnode
+  if (name === 'beforeMount') {
+    vnode._mount = vnode
+  } else if (name === 'beforeUpdate') {
+    const mount = prevVNode && prevVNode._mount
+    if (mount) {
+      mount._latest = vnode
+      vnode._mount = mount
+    }
+  } else if (name === 'mounted') {
+    const latest = vnode._latest
+    vnode._mount = vnode._latest = undefined
+    if (latest) {
+      hookVNode = latest
+      latest._mount = undefined
+    }
+  }
+
+  const bindings = hookVNode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
   for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i]
+    let binding = bindings[i]
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
+    } else if (name === 'mounted' && binding.oldValue !== undefined) {
+      // Do not mutate bindings that may also be used by queued updated hooks.
+      binding = extend({}, binding, { oldValue: undefined })
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
     if (__COMPAT__ && !hook) {
@@ -191,7 +219,7 @@ export function invokeDirectiveHook(
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
-        vnode,
+        hookVNode,
         prevVNode,
       ])
       resetTracking()

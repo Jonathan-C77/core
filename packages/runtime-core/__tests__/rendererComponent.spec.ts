@@ -6,6 +6,7 @@ import {
   inject,
   nextTick,
   nodeOps,
+  onMounted,
   provide,
   ref,
   render,
@@ -473,5 +474,148 @@ describe('renderer: component', () => {
     expect(
       `Property '$attrs' was accessed via 'this'. Avoid using 'this' in templates.`,
     ).toHaveBeenWarned()
+  })
+
+  test('should not update child component if style is not changed', async () => {
+    const text = ref(0)
+    const spy = vi.fn()
+
+    const ClientOnly = {
+      setup(_: any, { slots }: SetupContext) {
+        const mounted = ref(false)
+        onMounted(() => {
+          mounted.value = true
+        })
+        return () => {
+          if (mounted.value) {
+            return slots.default!()
+          }
+        }
+      },
+    }
+
+    const App = {
+      render() {
+        return h(ClientOnly, null, {
+          default: () => [
+            h('span', null, [text.value]),
+            h(Comp, { style: { width: '100%' } }),
+          ],
+        })
+      },
+    }
+
+    const Comp = {
+      render(this: any) {
+        spy()
+        return null
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<span>0</span><!---->`)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    text.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<span>1</span><!---->`)
+    // expect Comp to not be re-rendered
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not crash when updating a style prop with objects without a prototype', async () => {
+    const color = ref('red')
+    const count = ref(0)
+    const childRender = vi.fn(() => h('div', 'child'))
+
+    const Comp = {
+      render: childRender,
+    }
+
+    const App = {
+      render() {
+        count.value
+        // e.g. style objects produced by a library that uses Object.create(null)
+        return h(Comp, {
+          style: Object.assign(Object.create(null), { color: color.value }),
+        })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div style={"color":"red"}>child</div>`)
+    expect(childRender).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div style={"color":"red"}>child</div>`)
+    expect(childRender).toHaveBeenCalledTimes(1)
+
+    color.value = 'green'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div style={"color":"green"}>child</div>`,
+    )
+    expect(childRender).toHaveBeenCalledTimes(2)
+  })
+
+  test('should update child component when a prop is replaced by a new undefined prop', async () => {
+    const props = ref<Record<string, any>>({ foo: 'foo' })
+
+    const Comp = {
+      props: ['foo', 'bar'],
+      render(this: any) {
+        return h('div', `${this.foo}-${this.bar}`)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Comp, props.value)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>foo-undefined</div>`)
+
+    props.value = { bar: undefined }
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>undefined-undefined</div>`)
+
+    props.value = { bar: 'bar' }
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>undefined-bar</div>`)
+  })
+
+  test('should update child component when a prop is replaced by an emit listener', async () => {
+    const props = ref<Record<string, any>>({ foo: 'foo' })
+
+    const Comp = {
+      props: ['foo'],
+      emits: ['click'],
+      render(this: any) {
+        return h('div', `${this.foo}`)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Comp, props.value)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>foo</div>`)
+
+    props.value = { onClick: () => {} }
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>undefined</div>`)
   })
 })

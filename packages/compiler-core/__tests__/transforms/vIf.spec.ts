@@ -3,6 +3,7 @@ import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
+import { transformBind } from '../../src/transforms/vBind'
 import {
   type CommentNode,
   type ConditionalExpression,
@@ -17,7 +18,12 @@ import {
   type VNodeCall,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { type CompilerOptions, TO_HANDLERS, generate } from '../../src'
+import {
+  type CompilerOptions,
+  TO_HANDLERS,
+  generate,
+  transformVBindShorthand,
+} from '../../src'
 import {
   CREATE_COMMENT,
   FRAGMENT,
@@ -35,7 +41,12 @@ function parseWithIfTransform(
 ) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformIf, transformSlotOutlet, transformElement],
+    nodeTransforms: [
+      transformVBindShorthand,
+      transformIf,
+      transformSlotOutlet,
+      transformElement,
+    ],
     ...options,
   })
   if (!options.onError) {
@@ -209,6 +220,34 @@ describe('compiler: v-if', () => {
         content: `_ctx.ok`,
       })
     })
+
+    //#11321
+    test('v-if + :key shorthand', () => {
+      const { node } = parseWithIfTransform(`<div v-if="ok" :key></div>`)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches[0].userKey).toMatchObject({
+        arg: { content: 'key' },
+        exp: { content: 'key' },
+      })
+    })
+
+    //#16091
+    test('v-if loc should not depend on the last parsed template', () => {
+      const source = `<div v-if="ok">hello</div>`
+      const ast = parse(source)
+      // a bundler typically parses other templates between parse and transform
+      parse(`<template>\n<p>\na\ndifferent\nfile\n</p>\n</template>\n`)
+      transform(ast, {
+        nodeTransforms: [transformIf, transformElement],
+      })
+
+      const ifNode = ast.children[0] as IfNode
+      expect(ifNode.loc.source).toBe(source)
+      expect(ifNode.loc.start).toEqual({ line: 1, column: 1, offset: 0 })
+      expect(ifNode.loc.end).toEqual({ line: 1, column: 27, offset: 26 })
+      // #12131: the if node must not share its loc with the branch element
+      expect(ifNode.loc).not.toBe(ifNode.branches[0].children[0].loc)
+    })
   })
 
   describe('errors', () => {
@@ -244,6 +283,31 @@ describe('compiler: v-if', () => {
         {
           code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node3.loc,
+        },
+      ])
+
+      const { node: node4 } = parseWithIfTransform(
+        `<div v-if="bar"/>foo<div v-else/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node4.loc,
+        },
+      ])
+
+      // Non-breaking space
+      const { node: node5 } = parseWithIfTransform(
+        `<div v-if="bar"/>\u00a0<div v-else/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[4]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node5.loc,
         },
       ])
     })
@@ -285,6 +349,31 @@ describe('compiler: v-if', () => {
         },
       ])
 
+      const { node: node4 } = parseWithIfTransform(
+        `<div v-if="bar"/>foo<div v-else-if="foo"/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node4.loc,
+        },
+      ])
+
+      // Non-breaking space
+      const { node: node5 } = parseWithIfTransform(
+        `<div v-if="bar"/>\u00a0<div v-else-if="foo"/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[4]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node5.loc,
+        },
+      ])
+
       const {
         node: { branches },
       } = parseWithIfTransform(
@@ -293,7 +382,7 @@ describe('compiler: v-if', () => {
         0,
       )
 
-      expect(onError.mock.calls[3]).toMatchObject([
+      expect(onError.mock.calls[5]).toMatchObject([
         {
           code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: branches[branches.length - 1].loc,
@@ -439,7 +528,14 @@ describe('compiler: v-if', () => {
       expect(codegenNode.consequent).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT,
-        arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })],
+        arguments: [
+          '$slots',
+          '"default"',
+          '{}',
+          'undefined',
+          'undefined',
+          { content: '0' },
+        ],
       })
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -452,7 +548,41 @@ describe('compiler: v-if', () => {
       expect(codegenNode.consequent).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT,
-        arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })],
+        arguments: [
+          '$slots',
+          '"default"',
+          '{}',
+          'undefined',
+          'undefined',
+          { content: '0' },
+        ],
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('v-if on <slot/> with v-bind', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithIfTransform(`<slot v-if="ok" v-bind="items"></slot>`, {
+        directiveTransforms: {
+          bind: transformBind,
+        },
+      })
+      expect(codegenNode.consequent).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: RENDER_SLOT,
+        arguments: [
+          '$slots',
+          '"default"',
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_PROPS,
+          },
+          'undefined',
+          'undefined',
+          { content: '0' },
+        ],
       })
       expect(generate(root).code).toMatchSnapshot()
     })

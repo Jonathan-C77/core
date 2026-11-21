@@ -1,4 +1,10 @@
-import { BindingTypes } from '@vue/compiler-core'
+import { vi } from 'vitest'
+import {
+  BindingTypes,
+  type CompilerError,
+  NodeTypes,
+  createCompilerError,
+} from '@vue/compiler-core'
 import {
   assertCode,
   compileSFCScript as compile,
@@ -6,6 +12,17 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { compileScript, compileTemplate, parse } from '../src'
+import { templateAnalysisCache } from '../src/script/importUsageCheck'
+
+vi.mock('../src/warn', () => ({
+  warn: vi.fn(),
+  warnOnce: vi.fn(),
+}))
+
+import { warnOnce } from '../src/warn'
+
+const warnOnceMock = vi.mocked(warnOnce)
 
 describe('SFC compile <script setup>', () => {
   test('should compile JS syntax', () => {
@@ -72,6 +89,77 @@ describe('SFC compile <script setup>', () => {
       z: BindingTypes.SETUP_MAYBE_REF,
     })
     assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(`
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+    `)
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model (inlineTemplate)', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+      `,
+      { inlineTemplate: true },
+    )
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('v-model should error on literal const bindings', () => {
+    expect(() =>
+      compile(
+        `
+        <script setup>
+        const foo = 1
+        </script>
+        <template>
+          <input v-model="foo" />
+        </template>
+        `,
+        { inlineTemplate: true },
+      ),
+    ).toThrow('v-model cannot be used on a const binding')
   })
 
   describe('<script> and <script setup> co-usage', () => {
@@ -262,6 +350,43 @@ describe('SFC compile <script setup>', () => {
         `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`,
       )
       expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
+    })
+
+    test('should re-analyze a transformed template after cache invalidation', () => {
+      const delimiters: [string, string] = ['[[', ']]']
+      const { descriptor } = parse(
+        `
+        <script setup lang="ts">
+        import { cachedMsg } from './cachedMsg'
+        </script>
+        <template><p>[[ cachedMsg ]]</p></template>
+        `,
+        { templateParseOptions: { delimiters } },
+      )
+
+      const templateOptions = { compilerOptions: { delimiters } }
+      compileScript(descriptor, { id: mockId, templateOptions })
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(true)
+
+      compileTemplate({
+        filename: 'example.vue',
+        id: mockId,
+        source: descriptor.template!.content,
+        ast: descriptor.template!.ast,
+        compilerOptions: { delimiters },
+      })
+      expect(descriptor.template!.ast!.transformed).toBe(true)
+
+      templateAnalysisCache.clear()
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(
+        false,
+      )
+
+      const { content } = compileScript(descriptor, {
+        id: mockId,
+        templateOptions,
+      })
+      expect(content).toMatch(`return { get cachedMsg() { return cachedMsg } }`)
     })
 
     test('import dedupe between <script> and <script setup>', () => {
@@ -840,6 +965,28 @@ describe('SFC compile <script setup>', () => {
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    // #15495
+    test('await in switch case', () => {
+      const code = assertAwaitDetection(`switch (a) {
+        case 1:
+          foo()
+          await bar()
+      }`)
+      expect(code).toMatch(/foo\(\)\s*;\(/)
+    })
+
+    // #15495
+    test('await in switch case nested in a block', () => {
+      const code = assertAwaitDetection(`if (a) {
+        switch (b) {
+          case 1:
+            qux()
+            await bar()
+        }
+      }`)
+      expect(code).toMatch(/qux\(\)\s*;\(/)
+    })
+
     test('multiple `if` nested statements', () => {
       assertAwaitDetection(`if (ok) {
         let a = 'foo'
@@ -905,6 +1052,25 @@ describe('SFC compile <script setup>', () => {
         `const cls = class Foo { async method() { await bar }}`,
         false,
       )
+    })
+
+    // #15465
+    test('await statements after a nested block should be separated', async () => {
+      const { content } = compile(
+        `<script setup>
+        if (true) {
+          if (false) {}
+          await Promise.resolve(1)
+          await Promise.resolve(2)
+        }
+        </script>`,
+        { genDefaultAs: '_sfc_' },
+      )
+      const component = new Function(
+        '_withAsyncContext',
+        `${content.replace(/^import .*\n/, '')};return _sfc_`,
+      )((getAwaitable: () => unknown) => [getAwaitable(), () => {}])
+      await expect(component.setup({}, { expose() {} })).resolves.toEqual({})
     })
   })
 
@@ -1550,4 +1716,55 @@ describe('compileScript', () => {
     )
     assertCode(content)
   })
+
+  test('should not compile unrecognized language', () => {
+    const { content, lang, scriptAst } = compile(
+      `<script lang="coffee">
+      export default
+        data: ->
+          myVal: 0
+      </script>`,
+    )
+    expect(content).toMatch(`export default
+        data: ->
+          myVal: 0`)
+    expect(lang).toBe('coffee')
+    expect(scriptAst).not.toBeDefined()
+  })
+})
+
+test('calls user onWarn for inline template warnings', () => {
+  const warnings: CompilerError[] = []
+  compile(
+    `
+    <script setup>
+    const msg = 'hello'
+    </script>
+    <template>
+      <div>{{ msg }}</div>
+    </template>
+    `,
+    {
+      inlineTemplate: true,
+      templateOptions: {
+        compilerOptions: {
+          onWarn: w => warnings.push(w),
+          nodeTransforms: [
+            (node, ctx) => {
+              if (node.type === NodeTypes.ROOT) {
+                ctx.onWarn(
+                  createCompilerError(-1, node.loc, {
+                    [-1]: 'custom warning',
+                  }),
+                )
+              }
+            },
+          ],
+        },
+      },
+    },
+  )
+
+  expect(warnings).toHaveLength(1)
+  expect(warnings[0].message).toContain('custom warning')
 })

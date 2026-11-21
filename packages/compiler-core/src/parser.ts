@@ -40,12 +40,13 @@ import {
 } from './errors'
 import {
   forAliasRE,
+  isAllWhitespace,
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
   isVPre,
 } from './utils'
-import { decodeHTML } from 'entities/lib/decode.js'
+import { decodeHTML } from 'entities/decode'
 import {
   type ParserOptions as BabelOptions,
   parse,
@@ -469,7 +470,7 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   oncdata(start, end) {
-    if (stack[0].ns !== Namespaces.HTML) {
+    if ((stack[0] ? stack[0].ns : currentOptions.ns) !== Namespaces.HTML) {
       onText(getSlice(start, end), start, end)
     } else {
       emitError(ErrorCodes.CDATA_IN_HTML_CONTENT, start - 9)
@@ -881,15 +882,6 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   return removedWhitespace ? nodes.filter(Boolean) : nodes
 }
 
-function isAllWhitespace(str: string) {
-  for (let i = 0; i < str.length; i++) {
-    if (!isWhitespace(str.charCodeAt(i))) {
-      return false
-    }
-  }
-  return true
-}
-
 function hasNewlineChar(str: string) {
   for (let i = 0; i < str.length; i++) {
     const c = str.charCodeAt(i)
@@ -932,7 +924,14 @@ function getLoc(start: number, end?: number): SourceLocation {
 }
 
 export function cloneLoc(loc: SourceLocation): SourceLocation {
-  return getLoc(loc.start.offset, loc.end.offset)
+  // copy instead of recomputing via getLoc: the tokenizer and currentInput are
+  // module-level and hold the state of the last parse, while callers can run
+  // long after it (compiler-sfc reuses descriptor.template.ast)
+  return {
+    start: extend({}, loc.start),
+    end: extend({}, loc.end),
+    source: loc.source,
+  }
 }
 
 function setLocEnd(loc: SourceLocation, end: number) {
@@ -1054,7 +1053,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
           `ignored in non-browser builds.`,
       )
-    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+    } else if (__BROWSER__ && !__TEST__ && !currentOptions.decodeEntities) {
       throw new Error(
         `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )
